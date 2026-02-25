@@ -19,7 +19,7 @@ export async function POST(
     }
 
     const body = await request.json()
-    const { stop_type, observations } = body
+    const { stop_type, observations, duration_minutes } = body
 
     if (!stop_type) {
       return NextResponse.json(
@@ -35,9 +35,19 @@ export async function POST(
       )
     }
 
+    if (duration_minutes !== undefined && duration_minutes !== null) {
+      const dur = Number(duration_minutes)
+      if (isNaN(dur) || dur < 0) {
+        return NextResponse.json(
+          { error: "Duração inválida" },
+          { status: 400 }
+        )
+      }
+    }
+
     const result = await sql`
-      INSERT INTO stops (test_id, stop_type, observations)
-      VALUES (${testId}, ${stop_type}, ${observations || null})
+      INSERT INTO stops (test_id, stop_type, observations, duration_minutes)
+      VALUES (${testId}, ${stop_type}, ${observations || null}, ${duration_minutes ?? null})
       RETURNING *
     `
 

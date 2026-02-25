@@ -231,6 +231,7 @@ export function WorkSearchView() {
                       stops: {
                         id: number
                         stop_type: string
+                        duration_minutes: number | null
                         observations: string | null
                         created_at: string
                       }[]
@@ -391,6 +392,9 @@ export function WorkSearchView() {
                                             Tipo
                                           </TableHead>
                                           <TableHead className="text-xs">
+                                            Duracao
+                                          </TableHead>
+                                          <TableHead className="text-xs">
                                             Observacoes
                                           </TableHead>
                                           <TableHead className="text-xs">
@@ -403,12 +407,18 @@ export function WorkSearchView() {
                                           (stop: {
                                             id: number
                                             stop_type: string
+                                            duration_minutes: number | null
                                             observations: string | null
                                             created_at: string
                                           }) => (
                                             <TableRow key={stop.id}>
                                               <TableCell className="text-xs font-medium">
                                                 {stop.stop_type}
+                                              </TableCell>
+                                              <TableCell className="text-xs text-muted-foreground">
+                                                {stop.duration_minutes
+                                                  ? formatDuration(stop.duration_minutes)
+                                                  : "-"}
                                               </TableCell>
                                               <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
                                                 {stop.observations || "-"}

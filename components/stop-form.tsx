@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -22,6 +23,8 @@ interface StopFormProps {
 export function StopForm({ testId, onStopAdded }: StopFormProps) {
   const [stopType, setStopType] = useState("")
   const [observations, setObservations] = useState("")
+  const [durationHours, setDurationHours] = useState("")
+  const [durationMinutes, setDurationMinutes] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -34,6 +37,15 @@ export function StopForm({ testId, onStopAdded }: StopFormProps) {
       return
     }
 
+    const hours = durationHours ? parseInt(durationHours, 10) : 0
+    const mins = durationMinutes ? parseInt(durationMinutes, 10) : 0
+    const totalMinutes = hours * 60 + mins
+
+    if (totalMinutes <= 0) {
+      setError("Informe o tempo de parada (deve ser maior que 0)")
+      return
+    }
+
     setIsSubmitting(true)
     try {
       const res = await fetch(`/api/tests/${testId}/stops`, {
@@ -42,6 +54,7 @@ export function StopForm({ testId, onStopAdded }: StopFormProps) {
         body: JSON.stringify({
           stop_type: stopType,
           observations: observations.trim() || null,
+          duration_minutes: totalMinutes,
         }),
       })
 
@@ -52,6 +65,8 @@ export function StopForm({ testId, onStopAdded }: StopFormProps) {
 
       setStopType("")
       setObservations("")
+      setDurationHours("")
+      setDurationMinutes("")
       onStopAdded()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro desconhecido")
@@ -82,13 +97,47 @@ export function StopForm({ testId, onStopAdded }: StopFormProps) {
 
       <div className="flex flex-col gap-2">
         <Label className="text-sm font-medium text-foreground">
-          Observações <span className="font-normal text-muted-foreground">(opcional)</span>
+          Tempo de Parada
+        </Label>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <Input
+              type="number"
+              inputMode="numeric"
+              min="0"
+              max="23"
+              placeholder="0"
+              value={durationHours}
+              onChange={(e) => setDurationHours(e.target.value.replace(/\D/g, "").slice(0, 2))}
+              className="w-18 text-center"
+            />
+            <span className="text-sm text-muted-foreground">h</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Input
+              type="number"
+              inputMode="numeric"
+              min="0"
+              max="59"
+              placeholder="0"
+              value={durationMinutes}
+              onChange={(e) => setDurationMinutes(e.target.value.replace(/\D/g, "").slice(0, 2))}
+              className="w-18 text-center"
+            />
+            <span className="text-sm text-muted-foreground">min</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label className="text-sm font-medium text-foreground">
+          Observacoes <span className="font-normal text-muted-foreground">(opcional)</span>
         </Label>
         <Textarea
           placeholder="Adicione detalhes sobre a parada..."
           value={observations}
           onChange={(e) => setObservations(e.target.value)}
-          rows={3}
+          rows={2}
         />
       </div>
 

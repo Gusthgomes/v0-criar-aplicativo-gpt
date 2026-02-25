@@ -1,65 +1,125 @@
 import { sql } from "@/lib/db"
 import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
+import { MODEL_DURATION_MINUTES } from "@/lib/constants"
+import type { Model } from "@/lib/constants"
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const [
-      totalTests,
-      finishedTests,
-      stopsByType,
-      testsByModel,
-      recentTests,
-    ] = await Promise.all([
-      sql`SELECT COUNT(*)::int as count FROM tests`,
-      sql`
-        SELECT 
-          COUNT(*)::int as total,
-          COUNT(CASE WHEN actual_duration_minutes <= expected_duration_minutes THEN 1 END)::int as on_time,
-          COUNT(CASE WHEN actual_duration_minutes > expected_duration_minutes THEN 1 END)::int as exceeded,
-          COALESCE(AVG(actual_duration_minutes), 0)::float as avg_duration,
-          COALESCE(AVG(expected_duration_minutes), 0)::float as avg_expected
-        FROM tests
-        WHERE finished_at IS NOT NULL
-      `,
-      sql`
-        SELECT stop_type, COUNT(*)::int as count
-        FROM stops
-        GROUP BY stop_type
-        ORDER BY count DESC
-      `,
-      sql`
-        SELECT 
-          model,
-          COUNT(*)::int as total,
-          COUNT(CASE WHEN finished_at IS NOT NULL AND actual_duration_minutes <= expected_duration_minutes THEN 1 END)::int as on_time,
-          COUNT(CASE WHEN finished_at IS NOT NULL AND actual_duration_minutes > expected_duration_minutes THEN 1 END)::int as exceeded,
-          COALESCE(AVG(CASE WHEN finished_at IS NOT NULL THEN actual_duration_minutes END), 0)::float as avg_duration
-        FROM tests
-        GROUP BY model
-        ORDER BY total DESC
-      `,
-      sql`
-        SELECT 
-          t.*,
-          COUNT(s.id)::int as stop_count
-        FROM tests t
-        LEFT JOIN stops s ON s.test_id = t.id
-        WHERE t.finished_at IS NOT NULL
-        GROUP BY t.id
-        ORDER BY t.finished_at DESC
-        LIMIT 50
-      `,
-    ])
+    const { searchParams } = new URL(request.url)
+    const dateFrom = searchParams.get("date_from")
+    const dateTo = searchParams.get("date_to")
+    const bench = searchParams.get("bench")
+    const model = searchParams.get("model")
+    const employeeId = searchParams.get("employee_id")
 
-    const totalStops = await sql`
-      SELECT COUNT(*)::int as count FROM stops
-    `
+    // Build filter conditions dynamically
+    const conditions: string[] = []
+    const stopConditions: string[] = []
+
+    if (dateFrom) {
+      conditions.push(`t.created_at >= '${dateFrom}T00:00:00.000Z'`)
+      stopConditions.push(`s.created_at >= '${dateFrom}T00:00:00.000Z'`)
+    }
+    if (dateTo) {
+      conditions.push(`t.created_at <= '${dateTo}T23:59:59.999Z'`)
+      stopConditions.push(`s.created_at <= '${dateTo}T23:59:59.999Z'`)
+    }
+    if (bench) {
+      conditions.push(`t.bench = ${parseInt(bench, 10)}`)
+    }
+    if (model) {
+      conditions.push(`t.model = '${model}'`)
+    }
+    if (employeeId) {
+      conditions.push(`t.employee_id = '${employeeId}'`)
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : ""
+    const finishedWhereClause = conditions.length > 0
+      ? `WHERE t.finished_at IS NOT NULL AND ${conditions.join(" AND ")}`
+      : "WHERE t.finished_at IS NOT NULL"
+
+    // We need to use raw template strings for dynamic conditions
+    // Since neon sql tagged templates don't support dynamic WHERE easily,
+    // we'll use a workaround with separate queries
+    const totalTests = await sql(
+      `SELECT COUNT(*)::int as count FROM tests t ${whereClause}`
+    )
+
+    const finishedTests = await sql(
+      `SELECT 
+        COUNT(*)::int as total,
+        COUNT(CASE WHEN t.actual_duration_minutes <= t.expected_duration_minutes THEN 1 END)::int as on_time,
+        COUNT(CASE WHEN t.actual_duration_minutes > t.expected_duration_minutes THEN 1 END)::int as exceeded,
+        COALESCE(AVG(t.actual_duration_minutes), 0)::float as avg_duration,
+        COALESCE(AVG(t.expected_duration_minutes), 0)::float as avg_expected
+      FROM tests t
+      ${finishedWhereClause}`
+    )
+
+    const stopJoinWhere = conditions.length > 0
+      ? `WHERE ${conditions.map(c => c).join(" AND ")}`
+      : ""
+
+    const stopsQuery = stopConditions.length > 0
+      ? `WHERE ${stopConditions.join(" AND ")}`
+      : ""
+
+    const stopsByType = await sql(
+      `SELECT s.stop_type, COUNT(*)::int as count, COALESCE(SUM(s.duration_minutes), 0)::int as total_duration
+      FROM stops s
+      JOIN tests t ON t.id = s.test_id
+      ${stopJoinWhere ? stopJoinWhere : stopsQuery}
+      GROUP BY s.stop_type
+      ORDER BY count DESC`
+    )
+
+    const testsByModel = await sql(
+      `SELECT 
+        t.model,
+        COUNT(*)::int as total,
+        COUNT(CASE WHEN t.finished_at IS NOT NULL AND t.actual_duration_minutes <= t.expected_duration_minutes THEN 1 END)::int as on_time,
+        COUNT(CASE WHEN t.finished_at IS NOT NULL AND t.actual_duration_minutes > t.expected_duration_minutes THEN 1 END)::int as exceeded,
+        COALESCE(AVG(CASE WHEN t.finished_at IS NOT NULL THEN t.actual_duration_minutes END), 0)::float as avg_duration
+      FROM tests t
+      ${whereClause}
+      GROUP BY t.model
+      ORDER BY total DESC`
+    )
+
+    const recentTests = await sql(
+      `SELECT 
+        t.*,
+        COUNT(s.id)::int as stop_count,
+        COALESCE(SUM(s.duration_minutes), 0)::int as total_stop_duration
+      FROM tests t
+      LEFT JOIN stops s ON s.test_id = t.id
+      ${finishedWhereClause}
+      GROUP BY t.id
+      ORDER BY t.finished_at DESC
+      LIMIT 50`
+    )
+
+    const totalStops = await sql(
+      `SELECT COUNT(*)::int as count FROM stops s JOIN tests t ON t.id = s.test_id ${stopJoinWhere}`
+    )
 
     const finishedCount = finishedTests[0]?.total || 0
     const avgStopsPerTest =
       finishedCount > 0
         ? (totalStops[0]?.count || 0) / finishedCount
         : 0
+
+    // Build expected vs actual data for the chart
+    const expectedVsActual = testsByModel.map((t: { model: string; avg_duration: number }) => {
+      const expectedMinutes = MODEL_DURATION_MINUTES[t.model as Model] || 0
+      return {
+        model: t.model,
+        expected: expectedMinutes,
+        actual: Math.round(t.avg_duration),
+      }
+    })
 
     return NextResponse.json({
       total_tests: totalTests[0]?.count || 0,
@@ -79,6 +139,7 @@ export async function GET() {
       avg_stops_per_test: Math.round(avgStopsPerTest * 10) / 10,
       stops_by_type: stopsByType,
       tests_by_model: testsByModel,
+      expected_vs_actual: expectedVsActual,
       recent_tests: recentTests,
     })
   } catch (error) {

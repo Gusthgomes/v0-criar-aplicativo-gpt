@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useMemo } from "react"
 import useSWR from "swr"
 import {
   Bar,
@@ -10,6 +11,8 @@ import {
   ResponsiveContainer,
   Cell,
   Tooltip,
+  Legend,
+  ReferenceLine,
 } from "recharts"
 import {
   Card,
@@ -19,6 +22,16 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -29,7 +42,7 @@ import {
 } from "@/components/ui/table"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { AppHeader } from "@/components/app-header"
-import { formatDuration } from "@/lib/constants"
+import { formatDuration, MODELS, BENCHES } from "@/lib/constants"
 import {
   Loader2,
   ClipboardCheck,
@@ -37,21 +50,65 @@ import {
   TrendingDown,
   Timer,
   AlertTriangle,
+  Filter,
+  X,
 } from "lucide-react"
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json())
-
-// Compute colors for charts in JS since CSS vars don't work directly in Recharts
 const CHART_BLUE = "#3b5998"
 const CHART_GREEN = "#22a06b"
 const CHART_RED = "#d04040"
-const CHART_AMBER = "#c08a30"
 const CHART_TEAL = "#0d9488"
+const CHART_AMBER = "#d97706"
+
+function buildQueryString(filters: FilterState): string {
+  const params = new URLSearchParams()
+  if (filters.dateFrom) params.set("date_from", filters.dateFrom)
+  if (filters.dateTo) params.set("date_to", filters.dateTo)
+  if (filters.bench) params.set("bench", filters.bench)
+  if (filters.model) params.set("model", filters.model)
+  if (filters.employeeId) params.set("employee_id", filters.employeeId)
+  const qs = params.toString()
+  return `/api/dashboard${qs ? `?${qs}` : ""}`
+}
+
+interface FilterState {
+  dateFrom: string
+  dateTo: string
+  bench: string
+  model: string
+  employeeId: string
+}
+
+const emptyFilters: FilterState = {
+  dateFrom: "",
+  dateTo: "",
+  bench: "",
+  model: "",
+  employeeId: "",
+}
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
 export function DashboardView() {
-  const { data, error, isLoading } = useSWR("/api/dashboard", fetcher)
+  const [filters, setFilters] = useState<FilterState>(emptyFilters)
+  const [appliedFilters, setAppliedFilters] = useState<FilterState>(emptyFilters)
+  const [showFilters, setShowFilters] = useState(false)
 
-  if (isLoading) {
+  const url = useMemo(() => buildQueryString(appliedFilters), [appliedFilters])
+  const { data, error, isLoading } = useSWR(url, fetcher)
+
+  const hasActiveFilters = Object.values(appliedFilters).some((v) => v !== "")
+
+  function applyFilters() {
+    setAppliedFilters({ ...filters })
+  }
+
+  function clearFilters() {
+    setFilters(emptyFilters)
+    setAppliedFilters(emptyFilters)
+  }
+
+  if (isLoading && !data) {
     return (
       <div className="flex min-h-screen flex-col bg-background">
         <AppHeader />
@@ -75,19 +132,153 @@ export function DashboardView() {
 
   const stopsByType = (data?.stops_by_type || []).slice(0, 10)
   const testsByModel = data?.tests_by_model || []
+  const expectedVsActual = data?.expected_vs_actual || []
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <AppHeader />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground text-balance">
-            Dashboard de Análise
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Visão geral dos testes e paradas registradas
-          </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-foreground text-balance">
+              Dashboard de Analise
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Visao geral dos testes e paradas registradas
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {hasActiveFilters && (
+              <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+                Filtros ativos
+                <button onClick={clearFilters} className="ml-1">
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+            <Button
+              variant={showFilters ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className="gap-2"
+            >
+              <Filter className="h-4 w-4" />
+              Filtros
+            </Button>
+          </div>
         </div>
+
+        {/* Filters Panel */}
+        {showFilters && (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">
+                    Data Inicio
+                  </Label>
+                  <Input
+                    type="date"
+                    value={filters.dateFrom}
+                    onChange={(e) =>
+                      setFilters((f) => ({ ...f, dateFrom: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">
+                    Data Fim
+                  </Label>
+                  <Input
+                    type="date"
+                    value={filters.dateTo}
+                    onChange={(e) =>
+                      setFilters((f) => ({ ...f, dateTo: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">
+                    Banca
+                  </Label>
+                  <Select
+                    value={filters.bench}
+                    onValueChange={(v) =>
+                      setFilters((f) => ({ ...f, bench: v === "all" ? "" : v }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      {BENCHES.map((b) => (
+                        <SelectItem key={b} value={String(b)}>
+                          Banca {b}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">
+                    Modelo
+                  </Label>
+                  <Select
+                    value={filters.model}
+                    onValueChange={(v) =>
+                      setFilters((f) => ({ ...f, model: v === "all" ? "" : v }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {MODELS.map((m) => (
+                        <SelectItem key={m} value={m}>
+                          {m}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">
+                    8ID
+                  </Label>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Ex: 12345678"
+                    value={filters.employeeId}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 8)
+                      setFilters((f) => ({ ...f, employeeId: val }))
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="mt-4 flex items-center gap-2">
+                <Button onClick={applyFilters} size="sm">
+                  Aplicar Filtros
+                </Button>
+                {hasActiveFilters && (
+                  <Button variant="ghost" size="sm" onClick={clearFilters}>
+                    Limpar
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {isLoading && (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <span className="ml-2 text-sm text-muted-foreground">Carregando...</span>
+          </div>
+        )}
 
         {/* KPI Cards */}
         <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
@@ -111,7 +302,7 @@ export function DashboardView() {
             variant="danger"
           />
           <KpiCard
-            title="Tempo Médio"
+            title="Tempo Medio"
             value={data?.avg_duration ? formatDuration(data.avg_duration) : "N/A"}
             icon={<Timer className="h-4 w-4" />}
           />
@@ -133,15 +324,12 @@ export function DashboardView() {
             <CardContent>
               {stopsByType.length === 0 ? (
                 <p className="py-10 text-center text-sm text-muted-foreground">
-                  Sem dados disponíveis
+                  Sem dados disponiveis
                 </p>
               ) : (
                 <ChartContainer
                   config={{
-                    count: {
-                      label: "Quantidade",
-                      color: CHART_BLUE,
-                    },
+                    count: { label: "Quantidade", color: CHART_BLUE },
                   }}
                   className="h-[300px]"
                 >
@@ -181,24 +369,18 @@ export function DashboardView() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Testes por Modelo</CardTitle>
-              <CardDescription>Distribuição e cumprimento por modelo</CardDescription>
+              <CardDescription>Distribuicao e cumprimento por modelo</CardDescription>
             </CardHeader>
             <CardContent>
               {testsByModel.length === 0 ? (
                 <p className="py-10 text-center text-sm text-muted-foreground">
-                  Sem dados disponíveis
+                  Sem dados disponiveis
                 </p>
               ) : (
                 <ChartContainer
                   config={{
-                    on_time: {
-                      label: "No Tempo",
-                      color: CHART_GREEN,
-                    },
-                    exceeded: {
-                      label: "Excedeu",
-                      color: CHART_RED,
-                    },
+                    on_time: { label: "No Tempo", color: CHART_GREEN },
+                    exceeded: { label: "Excedeu", color: CHART_RED },
                   }}
                   className="h-[300px]"
                 >
@@ -232,36 +414,33 @@ export function DashboardView() {
             </CardContent>
           </Card>
 
-          {/* Tempo médio por modelo */}
+          {/* NOVO: Tempo Esperado vs Realizado */}
           <Card className="md:col-span-2">
             <CardHeader>
-              <CardTitle className="text-base">Tempo Médio por Modelo</CardTitle>
+              <CardTitle className="text-base">
+                Tempo de Teste: Esperado vs Realizado
+              </CardTitle>
               <CardDescription>
-                Comparação entre tempo médio real e estipulado por modelo
+                Comparacao entre o tempo estipulado por modelo e o tempo medio real dos testes
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {testsByModel.length === 0 ? (
+              {expectedVsActual.length === 0 ? (
                 <p className="py-10 text-center text-sm text-muted-foreground">
-                  Sem dados disponíveis
+                  Sem dados disponiveis
                 </p>
               ) : (
                 <ChartContainer
                   config={{
-                    avg_duration: {
-                      label: "Tempo Médio Real",
-                      color: CHART_TEAL,
-                    },
+                    expected: { label: "Estipulado", color: CHART_BLUE },
+                    actual: { label: "Realizado (media)", color: CHART_AMBER },
                   }}
-                  className="h-[250px]"
+                  className="h-[300px]"
                 >
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
-                      data={testsByModel.map((t: { model: string; avg_duration: number }) => ({
-                        ...t,
-                        avg_duration: Math.round(t.avg_duration),
-                      }))}
-                      margin={{ top: 5, right: 20, left: 5, bottom: 5 }}
+                      data={expectedVsActual}
+                      margin={{ top: 5, right: 30, left: 5, bottom: 5 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="model" tick={{ fontSize: 12 }} />
@@ -274,15 +453,33 @@ export function DashboardView() {
                         }}
                       />
                       <Tooltip
-                        formatter={(value: number) => [
-                          `${value} min`,
-                          "Tempo Médio",
+                        formatter={(value: number, name: string) => [
+                          `${value} min (${formatDuration(value)})`,
+                          name === "expected" ? "Estipulado" : "Realizado (media)",
                         ]}
                       />
-                      <Bar dataKey="avg_duration" radius={[4, 4, 0, 0]}>
-                        {testsByModel.map(
-                          (_: unknown, index: number) => (
-                            <Cell key={`cell-${index}`} fill={CHART_TEAL} />
+                      <Legend
+                        formatter={(value: string) =>
+                          value === "expected" ? "Estipulado" : "Realizado (media)"
+                        }
+                      />
+                      <Bar
+                        dataKey="expected"
+                        fill={CHART_BLUE}
+                        radius={[4, 4, 0, 0]}
+                        name="expected"
+                      />
+                      <Bar
+                        dataKey="actual"
+                        radius={[4, 4, 0, 0]}
+                        name="actual"
+                      >
+                        {expectedVsActual.map(
+                          (entry: { expected: number; actual: number }, index: number) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={entry.actual > entry.expected ? CHART_RED : CHART_GREEN}
+                            />
                           )
                         )}
                       </Bar>
@@ -298,7 +495,7 @@ export function DashboardView() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Testes Recentes</CardTitle>
-            <CardDescription>Últimos 50 testes finalizados</CardDescription>
+            <CardDescription>Ultimos 50 testes finalizados</CardDescription>
           </CardHeader>
           <CardContent>
             {!data?.recent_tests || data.recent_tests.length === 0 ? (
@@ -317,6 +514,7 @@ export function DashboardView() {
                       <TableHead>Estipulado</TableHead>
                       <TableHead>Real</TableHead>
                       <TableHead>Paradas</TableHead>
+                      <TableHead>Tempo Parado</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Data</TableHead>
                     </TableRow>
@@ -332,6 +530,7 @@ export function DashboardView() {
                         expected_duration_minutes: number
                         actual_duration_minutes: number
                         stop_count: number
+                        total_stop_duration: number
                         finished_at: string
                       }) => {
                         const withinTime =
@@ -354,6 +553,11 @@ export function DashboardView() {
                               {formatDuration(test.actual_duration_minutes)}
                             </TableCell>
                             <TableCell>{test.stop_count}</TableCell>
+                            <TableCell>
+                              {test.total_stop_duration > 0
+                                ? formatDuration(test.total_stop_duration)
+                                : "-"}
+                            </TableCell>
                             <TableCell>
                               <Badge
                                 variant={withinTime ? "default" : "destructive"}
