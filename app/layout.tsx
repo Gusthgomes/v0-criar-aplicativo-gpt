@@ -1,5 +1,6 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
+import { Toaster } from '@/components/ui/sonner'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
@@ -7,9 +8,8 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.app',
+  title: 'GPT V01 - Controle de Testes',
+  description: 'Sistema de controle de testes de obras com cronômetro, registro de paradas e dashboard analítico',
   icons: {
     icon: [
       {
@@ -29,15 +29,21 @@ export const metadata: Metadata = {
   },
 }
 
+export const viewport: Viewport = {
+  themeColor: '#2a3d6b',
+  userScalable: true,
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <body className="font-sans antialiased">
         {children}
+        <Toaster richColors position="top-center" />
         <Analytics />
       </body>
     </html>
