@@ -128,11 +128,10 @@ export function TestSession({ testId }: TestSessionProps) {
               </Badge>
               {isFinished && (
                 <Badge
-                  className={`px-3 py-1 ${
-                    test.actual_duration_minutes <= test.expected_duration_minutes
+                  className={`px-3 py-1 ${test.actual_duration_minutes <= test.expected_duration_minutes
                       ? "bg-[oklch(0.60_0.18_155)] text-[oklch(0.985_0_0)]"
                       : "bg-destructive text-[oklch(0.985_0_0)]"
-                  }`}
+                    }`}
                 >
                   {test.actual_duration_minutes <= test.expected_duration_minutes
                     ? "No Tempo"
@@ -179,7 +178,7 @@ export function TestSession({ testId }: TestSessionProps) {
                       <AlertDialogAction
                         onClick={handleFinish}
                         disabled={isFinishing}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        className="bg-destructive text-white hover:bg-destructive/90"
                       >
                         {isFinishing ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
