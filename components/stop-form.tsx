@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { STOP_TYPES } from "@/lib/constants"
-import { Plus, Loader2 } from "lucide-react"
+import { Plus, Loader2, Play, Square } from "lucide-react"
 
 interface StopFormProps {
   testId: number
@@ -23,10 +23,58 @@ interface StopFormProps {
 export function StopForm({ testId, onStopAdded }: StopFormProps) {
   const [stopType, setStopType] = useState("")
   const [observations, setObservations] = useState("")
-  const [durationHours, setDurationHours] = useState("")
-  const [durationMinutes, setDurationMinutes] = useState("")
+  const [isRunning, setIsRunning] = useState(false)
+  const [startTime, setStartTime] = useState<number | null>(null)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [durationMinutes, setDurationMinutes] = useState<number | null>(null) // minutos a salvar
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // intervalo para atualizar a contagem visual
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  // limpa o intervalo quando o componente desmonta
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+    }
+  }, [])
+
+  const formatTime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600)
+    const m = Math.floor((seconds % 3600) / 60)
+    const s = seconds % 60
+    return `${h.toString().padStart(2, "0")}:${m
+      .toString()
+      .padStart(2, "0")}:${s.toString().padStart(2, "0")}`
+  }
+
+  const handleStart = () => {
+    setError(null)
+    setIsRunning(true)
+    const now = Date.now()
+    setStartTime(now)
+
+    // inicia contagem a cada segundo
+    intervalRef.current = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - now) / 1000))
+    }, 1000)
+  }
+
+  const handleStop = () => {
+    if (!startTime) return
+
+    // limpa intervalo
+    if (intervalRef.current) clearInterval(intervalRef.current)
+
+    const totalSec = Math.floor((Date.now() - startTime) / 1000)
+    const totalMin = Math.floor(totalSec / 60) // arredonda para baixo
+    setDurationMinutes(totalMin)
+    setElapsedSeconds(totalSec)
+
+    setIsRunning(false)
+    setStartTime(null)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -37,12 +85,14 @@ export function StopForm({ testId, onStopAdded }: StopFormProps) {
       return
     }
 
-    const hours = durationHours ? parseInt(durationHours, 10) : 0
-    const mins = durationMinutes ? parseInt(durationMinutes, 10) : 0
-    const totalMinutes = hours * 60 + mins
+    // garante que o cronômetro tenha sido finalizado
+    if (durationMinutes === null) {
+      setError("Inicie e finalize o cronômetro antes de salvar")
+      return
+    }
 
-    if (totalMinutes <= 0) {
-      setError("Informe o tempo de parada (deve ser maior que 0)")
+    if (durationMinutes <= 0) {
+      setError("O tempo de parada deve ser maior que 0")
       return
     }
 
@@ -54,7 +104,7 @@ export function StopForm({ testId, onStopAdded }: StopFormProps) {
         body: JSON.stringify({
           stop_type: stopType,
           observations: observations.trim() || null,
-          duration_minutes: totalMinutes,
+          duration_minutes: durationMinutes,
         }),
       })
 
@@ -63,10 +113,11 @@ export function StopForm({ testId, onStopAdded }: StopFormProps) {
         throw new Error(data.error || "Erro ao registrar parada")
       }
 
+      // limpa estado para uma nova inserção
       setStopType("")
       setObservations("")
-      setDurationHours("")
-      setDurationMinutes("")
+      setDurationMinutes(null)
+      setElapsedSeconds(0)
       onStopAdded()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro desconhecido")
@@ -77,6 +128,7 @@ export function StopForm({ testId, onStopAdded }: StopFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      {/* Tipo de parada */}
       <div className="flex flex-col gap-2">
         <Label className="text-sm font-medium text-foreground">
           Tipo de Parada
@@ -95,43 +147,47 @@ export function StopForm({ testId, onStopAdded }: StopFormProps) {
         </Select>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Label className="text-sm font-medium text-foreground">
-          Tempo de Parada
-        </Label>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5">
-            <Input
-              type="number"
-              inputMode="numeric"
-              min="0"
-              max="23"
-              placeholder="0"
-              value={durationHours}
-              onChange={(e) => setDurationHours(e.target.value.replace(/\D/g, "").slice(0, 2))}
-              className="w-18 text-center"
-            />
-            <span className="text-sm text-muted-foreground">h</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Input
-              type="number"
-              inputMode="numeric"
-              min="0"
-              max="59"
-              placeholder="0"
-              value={durationMinutes}
-              onChange={(e) => setDurationMinutes(e.target.value.replace(/\D/g, "").slice(0, 2))}
-              className="w-18 text-center"
-            />
-            <span className="text-sm text-muted-foreground">min</span>
-          </div>
-        </div>
-      </div>
+      {/* Cronômetro */}
+      {stopType && (
+        <div className="flex flex-col gap-2">
+          <Label className="text-sm font-medium text-foreground">
+            Cronômetro da Parada
+          </Label>
 
+          {/* Exibição do tempo */}
+          <div className="text-lg font-mono">
+            {formatTime(elapsedSeconds)}
+          </div>
+
+          {/* Botões de controle */}
+          {!isRunning ? (
+            <Button
+              type="button"
+              onClick={handleStart}
+              disabled={isSubmitting}
+              variant="default"
+            >
+              <Play className="mr-2 h-4 w-4" />
+              Iniciar
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              onClick={handleStop}
+              disabled={isSubmitting}
+              variant="destructive"
+            >
+              <Square className="mr-2 h-4 w-4" />
+              Parar
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Observações (opcional) */}
       <div className="flex flex-col gap-2">
         <Label className="text-sm font-medium text-foreground">
-          Observacoes <span className="font-normal text-muted-foreground">(opcional)</span>
+          Observações <span className="font-normal text-muted-foreground">(opcional)</span>
         </Label>
         <Textarea
           placeholder="Adicione detalhes sobre a parada..."
@@ -141,10 +197,10 @@ export function StopForm({ testId, onStopAdded }: StopFormProps) {
         />
       </div>
 
-      {error && (
-        <p className="text-sm text-destructive">{error}</p>
-      )}
+      {/* Mensagem de erro */}
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
+      {/* Botão de enviar */}
       <Button type="submit" variant="outline" disabled={isSubmitting}>
         {isSubmitting ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
