@@ -6,23 +6,23 @@ import useSWR from "swr"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Label } from "@/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { TestTimer } from "@/components/test-timer"
 import { StopForm } from "@/components/stop-form"
 import { StopsList } from "@/components/stops-list"
 import { formatDuration } from "@/lib/constants"
 import { AppHeader } from "@/components/app-header"
-import { Square, Loader2, User, Wrench, Hash, Timer } from "lucide-react"
+import { Square, Loader2, User, Wrench, Hash, Timer, Moon } from "lucide-react"
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
@@ -34,6 +34,8 @@ export function TestSession({ testId }: TestSessionProps) {
   const router = useRouter()
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [isFinishing, setIsFinishing] = useState(false)
+  const [isComplete, setIsComplete] = useState<"yes" | "no">("yes")
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   const { data: test, error, mutate } = useSWR(
     `/api/tests/${testId}`,
@@ -49,12 +51,15 @@ export function TestSession({ testId }: TestSessionProps) {
     setIsFinishing(true)
     try {
       const actualMinutes = Math.ceil(elapsedSeconds / 60)
+      const complete = isComplete === "yes"
 
       const res = await fetch(`/api/tests/${testId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           actual_duration_minutes: actualMinutes,
+          is_complete: complete,
+          elapsed_seconds_at_pause: complete ? null : elapsedSeconds,
         }),
       })
 
@@ -62,7 +67,11 @@ export function TestSession({ testId }: TestSessionProps) {
         throw new Error("Erro ao encerrar teste")
       }
 
-      router.push("/?finished=true")
+      if (complete) {
+        router.push("/?finished=true")
+      } else {
+        router.push("/?paused=true")
+      }
     } catch {
       setIsFinishing(false)
     }
@@ -75,7 +84,7 @@ export function TestSession({ testId }: TestSessionProps) {
         <main className="flex flex-1 items-center justify-center px-4">
           <Card className="w-full max-w-md">
             <CardContent className="py-10 text-center">
-              <p className="text-destructive">Teste não encontrado</p>
+              <p className="text-destructive">Teste nao encontrado</p>
               <Button variant="outline" className="mt-4" onClick={() => router.push("/")}>
                 Voltar
               </Button>
@@ -98,6 +107,7 @@ export function TestSession({ testId }: TestSessionProps) {
   }
 
   const isFinished = !!test.finished_at
+  const initialElapsed = test.elapsed_seconds_at_pause ?? 0
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -126,27 +136,38 @@ export function TestSession({ testId }: TestSessionProps) {
                 <Timer className="h-3 w-3" />
                 {formatDuration(test.expected_duration_minutes)}
               </Badge>
-              {isFinished && (
+              {isFinished && test.is_complete && (
                 <Badge
-                  className={`px-3 py-1 ${test.actual_duration_minutes <= test.expected_duration_minutes
+                  className={`px-3 py-1 ${
+                    test.actual_duration_minutes <= test.expected_duration_minutes
                       ? "bg-[oklch(0.60_0.18_155)] text-[oklch(0.985_0_0)]"
                       : "bg-destructive text-[oklch(0.985_0_0)]"
-                    }`}
+                  }`}
                 >
                   {test.actual_duration_minutes <= test.expected_duration_minutes
                     ? "No Tempo"
                     : "Excedeu"}
                 </Badge>
               )}
+              {isFinished && !test.is_complete && (
+                <Badge className="bg-amber-500 px-3 py-1 text-white">
+                  <Moon className="mr-1 h-3 w-3" />
+                  Pausado
+                </Badge>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Cronômetro */}
+        {/* Cronometro */}
         <Card>
           <CardHeader className="pb-2 text-center">
             <CardTitle className="text-lg text-foreground">
-              {isFinished ? "Teste Encerrado" : "Cronômetro do Teste"}
+              {isFinished && test.is_complete
+                ? "Teste Encerrado"
+                : isFinished && !test.is_complete
+                ? "Teste Pausado"
+                : "Cronometro do Teste"}
             </CardTitle>
           </CardHeader>
           <CardContent className="pb-6">
@@ -154,49 +175,118 @@ export function TestSession({ testId }: TestSessionProps) {
               durationMinutes={test.expected_duration_minutes}
               startTime={test.created_at}
               isFinished={isFinished}
+              initialElapsedSeconds={initialElapsed}
               onElapsedChange={handleElapsedChange}
             />
 
             {!isFinished && (
               <div className="mt-6 flex justify-center">
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
+                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                  <DialogTrigger asChild>
                     <Button variant="destructive" size="lg" className="gap-2">
                       <Square className="h-4 w-4" />
                       Encerrar Teste
                     </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Encerrar teste?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Tem certeza que deseja encerrar este teste? O tempo real será registrado e esta ação não poderá ser desfeita.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Encerrar teste</DialogTitle>
+                      <DialogDescription>
+                        O teste foi completado ou precisa ser continuado em outro dia?
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="flex flex-col gap-4 py-4">
+                      <Label className="text-sm font-semibold text-foreground">
+                        Teste completo?
+                      </Label>
+                      <RadioGroup
+                        value={isComplete}
+                        onValueChange={(val) => setIsComplete(val as "yes" | "no")}
+                        className="flex flex-col gap-3"
+                      >
+                        <div className="flex items-start gap-3 rounded-lg border border-border p-3 hover:bg-accent/50 transition-colors">
+                          <RadioGroupItem value="yes" id="complete-yes" className="mt-0.5" />
+                          <Label htmlFor="complete-yes" className="cursor-pointer flex-1">
+                            <p className="text-sm font-medium text-foreground">
+                              Sim - Teste finalizado
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              O teste da obra foi concluido. Nao podera ser retomado.
+                            </p>
+                          </Label>
+                        </div>
+                        <div className="flex items-start gap-3 rounded-lg border border-border p-3 hover:bg-accent/50 transition-colors">
+                          <RadioGroupItem value="no" id="complete-no" className="mt-0.5" />
+                          <Label htmlFor="complete-no" className="cursor-pointer flex-1">
+                            <p className="text-sm font-medium text-foreground">
+                              Nao - Continuar amanha
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              O teste sera pausado e podera ser retomado de onde parou no proximo dia.
+                            </p>
+                          </Label>
+                        </div>
+                      </RadioGroup>
+
+                      {isComplete === "no" && (
+                        <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-2.5">
+                          <Moon className="h-4 w-4 text-amber-600 shrink-0" />
+                          <p className="text-xs text-amber-700">
+                            O cronometro sera pausado com o tempo atual acumulado. Voce podera retomar este teste pela tela inicial.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    <DialogFooter className="gap-2 sm:gap-0">
+                      <Button
+                        variant="outline"
+                        onClick={() => setDialogOpen(false)}
+                        disabled={isFinishing}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
                         onClick={handleFinish}
                         disabled={isFinishing}
-                        className="bg-destructive text-white hover:bg-destructive/90"
+                        variant={isComplete === "yes" ? "destructive" : "default"}
                       >
                         {isFinishing ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         ) : null}
-                        Confirmar
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                        {isComplete === "yes" ? "Finalizar Teste" : "Pausar para Amanha"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             )}
 
-            {isFinished && (
+            {isFinished && test.is_complete && (
               <div className="mt-4 text-center">
                 <p className="text-sm text-muted-foreground">
-                  Tempo real: <span className="font-medium text-foreground">{formatDuration(test.actual_duration_minutes)}</span>
+                  Tempo real:{" "}
+                  <span className="font-medium text-foreground">
+                    {formatDuration(test.actual_duration_minutes)}
+                  </span>
                   {" / "}
-                  Tempo estipulado: <span className="font-medium text-foreground">{formatDuration(test.expected_duration_minutes)}</span>
+                  Tempo estipulado:{" "}
+                  <span className="font-medium text-foreground">
+                    {formatDuration(test.expected_duration_minutes)}
+                  </span>
+                </p>
+              </div>
+            )}
+
+            {isFinished && !test.is_complete && (
+              <div className="mt-4 text-center">
+                <p className="text-sm text-muted-foreground">
+                  Teste pausado com{" "}
+                  <span className="font-medium text-foreground">
+                    {formatDuration(test.actual_duration_minutes)}
+                  </span>{" "}
+                  registrados. Retome pela tela inicial.
                 </p>
               </div>
             )}

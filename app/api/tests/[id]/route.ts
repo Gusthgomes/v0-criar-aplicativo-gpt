@@ -11,7 +11,7 @@ export async function GET(
 
     if (isNaN(testId)) {
       return NextResponse.json(
-        { error: "ID inválido" },
+        { error: "ID invalido" },
         { status: 400 }
       )
     }
@@ -22,7 +22,7 @@ export async function GET(
 
     if (tests.length === 0) {
       return NextResponse.json(
-        { error: "Teste não encontrado" },
+        { error: "Teste nao encontrado" },
         { status: 404 }
       )
     }
@@ -51,37 +51,67 @@ export async function PATCH(
 
     if (isNaN(testId)) {
       return NextResponse.json(
-        { error: "ID inválido" },
+        { error: "ID invalido" },
         { status: 400 }
       )
     }
 
     const body = await request.json()
-    const { actual_duration_minutes } = body
+    const { actual_duration_minutes, is_complete, elapsed_seconds_at_pause } = body
 
-    if (actual_duration_minutes === undefined || actual_duration_minutes === null) {
-      return NextResponse.json(
-        { error: "Tempo real é obrigatório" },
-        { status: 400 }
-      )
+    // Case 1: Finishing a test (complete or paused for next day)
+    if (actual_duration_minutes !== undefined && actual_duration_minutes !== null) {
+      const complete = is_complete !== false // default true
+
+      if (complete) {
+        // Fully finishing the test
+        const result = await sql`
+          UPDATE tests 
+          SET actual_duration_minutes = ${actual_duration_minutes},
+              finished_at = NOW(),
+              is_complete = true
+          WHERE id = ${testId}
+          RETURNING *
+        `
+
+        if (result.length === 0) {
+          return NextResponse.json(
+            { error: "Teste nao encontrado" },
+            { status: 404 }
+          )
+        }
+
+        return NextResponse.json(result[0])
+      } else {
+        // Pausing the test for the next day
+        const elapsedSec = elapsed_seconds_at_pause ?? Math.ceil(actual_duration_minutes * 60)
+
+        const result = await sql`
+          UPDATE tests 
+          SET actual_duration_minutes = ${actual_duration_minutes},
+              finished_at = NOW(),
+              is_complete = false,
+              elapsed_seconds_at_pause = ${elapsedSec},
+              paused_at = NOW()
+          WHERE id = ${testId}
+          RETURNING *
+        `
+
+        if (result.length === 0) {
+          return NextResponse.json(
+            { error: "Teste nao encontrado" },
+            { status: 404 }
+          )
+        }
+
+        return NextResponse.json(result[0])
+      }
     }
 
-    const result = await sql`
-      UPDATE tests 
-      SET actual_duration_minutes = ${actual_duration_minutes},
-          finished_at = NOW()
-      WHERE id = ${testId}
-      RETURNING *
-    `
-
-    if (result.length === 0) {
-      return NextResponse.json(
-        { error: "Teste não encontrado" },
-        { status: 404 }
-      )
-    }
-
-    return NextResponse.json(result[0])
+    return NextResponse.json(
+      { error: "Dados invalidos" },
+      { status: 400 }
+    )
   } catch (error) {
     console.error("Error updating test:", error)
     return NextResponse.json(

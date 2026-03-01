@@ -7,6 +7,7 @@ interface TestTimerProps {
   durationMinutes: number
   startTime: string
   isFinished: boolean
+  initialElapsedSeconds?: number
   onElapsedChange?: (seconds: number) => void
 }
 
@@ -14,6 +15,7 @@ export function TestTimer({
   durationMinutes,
   startTime,
   isFinished,
+  initialElapsedSeconds = 0,
   onElapsedChange,
 }: TestTimerProps) {
   const [remainingSeconds, setRemainingSeconds] = useState(durationMinutes * 60)
@@ -22,12 +24,13 @@ export function TestTimer({
   const updateTimer = useCallback(() => {
     const start = new Date(startTime).getTime()
     const now = Date.now()
-    const elapsedSeconds = Math.floor((now - start) / 1000)
-    const remaining = durationMinutes * 60 - elapsedSeconds
+    const elapsedSinceResume = Math.floor((now - start) / 1000)
+    const totalElapsed = initialElapsedSeconds + elapsedSinceResume
+    const remaining = durationMinutes * 60 - totalElapsed
 
     setRemainingSeconds(remaining)
-    onElapsedChange?.(elapsedSeconds)
-  }, [startTime, durationMinutes, onElapsedChange])
+    onElapsedChange?.(totalElapsed)
+  }, [startTime, durationMinutes, initialElapsedSeconds, onElapsedChange])
 
   useEffect(() => {
     if (isFinished) return
@@ -43,13 +46,22 @@ export function TestTimer({
   }, [isFinished, updateTimer])
 
   const isExceeded = remainingSeconds < 0
+  const totalSeconds = durationMinutes * 60
   const progressPercent = Math.max(
     0,
-    Math.min(100, ((durationMinutes * 60 - remainingSeconds) / (durationMinutes * 60)) * 100)
+    Math.min(100, ((totalSeconds - remainingSeconds) / totalSeconds) * 100)
   )
 
   return (
     <div className="flex flex-col items-center gap-4">
+      {initialElapsedSeconds > 0 && !isFinished && (
+        <div className="rounded-md bg-primary/10 border border-primary/20 px-3 py-1.5">
+          <p className="text-xs font-medium text-primary">
+            Teste retomado - tempo anterior acumulado
+          </p>
+        </div>
+      )}
+
       <div
         className={`flex items-center justify-center rounded-2xl px-8 py-6 transition-colors duration-300 ${
           isFinished
