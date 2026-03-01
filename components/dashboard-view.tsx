@@ -52,6 +52,7 @@ import {
   AlertTriangle,
   Filter,
   X,
+  ShieldCheck,
 } from "lucide-react"
 
 const CHART_BLUE = "#3b5998"
@@ -133,6 +134,32 @@ export function DashboardView() {
   const stopsByType = (data?.stops_by_type || []).slice(0, 10)
   const testsByModel = data?.tests_by_model || []
   const expectedVsActual = data?.expected_vs_actual || []
+  const firstTestApproval = (data?.first_test_approval || []).map(
+    (item: {
+      model: string
+      total_first_tests: number
+      approved_no_stops: number
+      approved_time_only: number
+    }) => ({
+      ...item,
+      approved_pct:
+        item.total_first_tests > 0
+          ? Math.round((item.approved_no_stops / item.total_first_tests) * 100)
+          : 0,
+      not_approved: item.total_first_tests - item.approved_no_stops,
+    })
+  )
+
+  const totalFirstTests = firstTestApproval.reduce(
+    (sum: number, item: { total_first_tests: number }) => sum + item.total_first_tests,
+    0
+  )
+  const totalApprovedFirst = firstTestApproval.reduce(
+    (sum: number, item: { approved_no_stops: number }) => sum + item.approved_no_stops,
+    0
+  )
+  const approvedFirstPct =
+    totalFirstTests > 0 ? Math.round((totalApprovedFirst / totalFirstTests) * 100) : 0
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -490,6 +517,86 @@ export function DashboardView() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Obras Aprovadas no Primeiro Teste */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-start justify-between">
+              <div>
+                <CardTitle className="text-base">
+                  Obras Aprovadas no Primeiro Teste
+                </CardTitle>
+                <CardDescription>
+                  Obras que passaram no 1o teste sem paradas relevantes (exclui Refeicao, Apoio Tecnico, PTE, Parada Pessoal, GD)
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2">
+                <ShieldCheck className="h-5 w-5 text-primary" />
+                <div className="text-right">
+                  <p className="text-lg font-bold text-primary">{approvedFirstPct}%</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {totalApprovedFirst}/{totalFirstTests} obras
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {firstTestApproval.length === 0 ? (
+              <p className="py-10 text-center text-sm text-muted-foreground">
+                Sem dados disponiveis
+              </p>
+            ) : (
+              <ChartContainer
+                config={{
+                  approved_no_stops: { label: "Aprovadas", color: CHART_GREEN },
+                  not_approved: { label: "Nao Aprovadas", color: CHART_RED },
+                }}
+                className="h-[300px]"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={firstTestApproval}
+                    margin={{ top: 5, right: 30, left: 5, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="model" tick={{ fontSize: 12 }} />
+                    <YAxis />
+                    <Tooltip
+                      formatter={(value: number, name: string) => [
+                        `${value} obras`,
+                        name === "approved_no_stops"
+                          ? "Aprovadas no 1o teste"
+                          : "Nao aprovadas",
+                      ]}
+                    />
+                    <Legend
+                      formatter={(value: string) =>
+                        value === "approved_no_stops"
+                          ? "Aprovadas no 1o teste"
+                          : "Nao aprovadas"
+                      }
+                    />
+                    <Bar
+                      dataKey="approved_no_stops"
+                      stackId="a"
+                      fill={CHART_GREEN}
+                      radius={[0, 0, 0, 0]}
+                      name="approved_no_stops"
+                    />
+                    <Bar
+                      dataKey="not_approved"
+                      stackId="a"
+                      fill={CHART_RED}
+                      radius={[4, 4, 0, 0]}
+                      name="not_approved"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Tabela de testes recentes */}
         <Card>

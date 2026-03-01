@@ -111,6 +111,47 @@ export async function GET(request: NextRequest) {
         ? (totalStops[0]?.count || 0) / finishedCount
         : 0
 
+    // Obras aprovadas no primeiro teste (excluindo paradas nao-relevantes)
+    // Uma obra e "aprovada no 1o teste" se o primeiro teste (por data) terminou no tempo,
+    // e nao teve paradas relevantes (exclui Refeicao, Apoio tecnico, PTE PCO PFI ZETE, Parada pessoal, GD)
+    const firstTestApproval = await sql(
+      `WITH first_tests AS (
+        SELECT DISTINCT ON (t.work_number)
+          t.id,
+          t.work_number,
+          t.model,
+          t.actual_duration_minutes,
+          t.expected_duration_minutes,
+          t.finished_at
+        FROM tests t
+        ${finishedWhereClause}
+        ORDER BY t.work_number, t.created_at ASC
+      ),
+      relevant_stops AS (
+        SELECT ft.id as test_id, COUNT(s.id)::int as relevant_stop_count
+        FROM first_tests ft
+        LEFT JOIN stops s ON s.test_id = ft.id
+          AND s.stop_type NOT IN ('Refeição', 'Apoio técnico', 'PTE PCO PFI ZETE', 'Parada pessoal', 'GD')
+        GROUP BY ft.id
+      )
+      SELECT
+        ft.model,
+        COUNT(*)::int as total_first_tests,
+        COUNT(CASE
+          WHEN ft.actual_duration_minutes <= ft.expected_duration_minutes
+           AND COALESCE(rs.relevant_stop_count, 0) = 0
+          THEN 1
+        END)::int as approved_no_stops,
+        COUNT(CASE
+          WHEN ft.actual_duration_minutes <= ft.expected_duration_minutes
+          THEN 1
+        END)::int as approved_time_only
+      FROM first_tests ft
+      LEFT JOIN relevant_stops rs ON rs.test_id = ft.id
+      GROUP BY ft.model
+      ORDER BY ft.model`
+    )
+
     // Build expected vs actual data for the chart
     const expectedVsActual = testsByModel.map((t: { model: string; avg_duration: number }) => {
       const expectedMinutes = MODEL_DURATION_MINUTES[t.model as Model] || 0
@@ -140,6 +181,7 @@ export async function GET(request: NextRequest) {
       stops_by_type: stopsByType,
       tests_by_model: testsByModel,
       expected_vs_actual: expectedVsActual,
+      first_test_approval: firstTestApproval,
       recent_tests: recentTests,
     })
   } catch (error) {
