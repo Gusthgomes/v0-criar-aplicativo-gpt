@@ -527,7 +527,7 @@ export function DashboardView() {
                   Obras Aprovadas no Primeiro Teste
                 </CardTitle>
                 <CardDescription>
-                  Obras que passaram no 1o teste sem paradas relevantes (exclui Refeicao, Apoio Tecnico, PTE, Parada Pessoal, GD)
+                  Obras que passaram no primeiro teste sem paradas relevantes (exclui Refeicao, Apoio Tecnico, PTE, Parada Pessoal, GD)
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2">
@@ -725,13 +725,12 @@ function KpiCard({
           <span className="text-xs font-medium">{title}</span>
         </div>
         <p
-          className={`text-2xl font-bold ${
-            variant === "success"
+          className={`text-2xl font-bold ${variant === "success"
               ? "text-[#22a06b]"
               : variant === "danger"
-              ? "text-destructive"
-              : "text-foreground"
-          }`}
+                ? "text-destructive"
+                : "text-foreground"
+            }`}
         >
           {value}
         </p>
