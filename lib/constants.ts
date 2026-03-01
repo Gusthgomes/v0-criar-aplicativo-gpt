@@ -35,24 +35,26 @@ export const MODEL_DURATION_MINUTES: Record<Model, number> = {
 }
 
 export const STOP_TYPES = [
-  "Falta de material comprado",
-  "Falta de material fabricado",
-  "Retrabalho",
-  "ECM",
-  "Vinculação",
-  "Setup",
-  "Desconexão",
-  "Esquecimento separação",
-  "Abastecimento DALG",
-  "Qualidade",
-  "Variação estoque",
-  "Engenharia",
-  "DPCP",
-  "Falta de energia",
-  "Defeito",
   "Erro de montagem",
-  "Fornecedor",
-  "Outros",
+  "Erro de fornecedor",
+  "Retrabalho",
+  "Movimentação",
+  "Erro de especificação",
+  "Software",
+  "Desconexão",
+  "PTE PCO PFI ZETE",
+  "Falta de material",
+  "Material trocado",
+  "Material sem identificação",
+  "Sem saldo comprado",
+  "Sem saldo fabricado",
+  "Apoio DPCP",
+  "Setup",
+  "Vinculação",
+  "Parada pessoal",
+  "Refeição",
+  "Apoio técnico",
+  "GD"
 ] as const
 
 export type StopType = (typeof STOP_TYPES)[number]
