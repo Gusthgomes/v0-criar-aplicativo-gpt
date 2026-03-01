@@ -670,7 +670,7 @@ export function DashboardView() {
                                 variant={withinTime ? "default" : "destructive"}
                                 className={
                                   withinTime
-                                    ? "bg-[#22a06b] text-[#fff]"
+                                    ? "bg-[#22a06b] text-white"
                                     : ""
                                 }
                               >
@@ -726,10 +726,10 @@ function KpiCard({
         </div>
         <p
           className={`text-2xl font-bold ${variant === "success"
-              ? "text-[#22a06b]"
-              : variant === "danger"
-                ? "text-destructive"
-                : "text-foreground"
+            ? "text-[#22a06b]"
+            : variant === "danger"
+              ? "text-destructive"
+              : "text-foreground"
             }`}
         >
           {value}
