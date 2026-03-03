@@ -308,11 +308,19 @@ export function DashboardView() {
         )}
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
           <KpiCard
-            title="Total de Testes"
-            value={String(data?.total_tests || 0)}
+            title="Testes Encerrados"
+            value={String(data?.finished_tests || 0)}
+            description={`de ${data?.total_tests || 0} no total`}
             icon={<ClipboardCheck className="h-4 w-4" />}
+          />
+          <KpiCard
+            title="Em Andamento"
+            value={String(data?.pending_tests || 0)}
+            description="Pausados ou ativos"
+            icon={<Loader2 className="h-4 w-4" />}
+            variant="warning"
           />
           <KpiCard
             title="No Tempo"
@@ -732,22 +740,24 @@ function KpiCard({
   value: string
   description?: string
   icon: React.ReactNode
-  variant?: "success" | "danger"
-}) {
+  variant?: "success" | "danger" | "warning"
+  }) {
   return (
-    <Card>
-      <CardContent className="flex flex-col gap-1 py-4">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          {icon}
-          <span className="text-xs font-medium">{title}</span>
-        </div>
-        <p
-          className={`text-2xl font-bold ${variant === "success"
-            ? "text-[#22a06b]"
-            : variant === "danger"
-              ? "text-destructive"
-              : "text-foreground"
-            }`}
+  <Card>
+  <CardContent className="flex flex-col gap-1 py-4">
+  <div className="flex items-center gap-2 text-muted-foreground">
+  {icon}
+  <span className="text-xs font-medium">{title}</span>
+  </div>
+  <p
+  className={`text-2xl font-bold ${variant === "success"
+  ? "text-[#22a06b]"
+  : variant === "danger"
+  ? "text-destructive"
+  : variant === "warning"
+  ? "text-amber-600"
+  : "text-foreground"
+  }`}
         >
           {value}
         </p>

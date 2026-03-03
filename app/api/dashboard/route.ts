@@ -105,6 +105,10 @@ export async function GET(request: NextRequest) {
       `SELECT COUNT(*)::int as count FROM stops s JOIN tests t ON t.id = s.test_id ${stopJoinWhere}`
     )
 
+    const pendingTests = await sql(
+      `SELECT COUNT(*)::int as count FROM tests t ${whereClause ? whereClause + " AND" : "WHERE"} t.finished_at IS NULL`
+    )
+
     const finishedCount = finishedTests[0]?.total || 0
     const avgStopsPerTest =
       finishedCount > 0
@@ -165,6 +169,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       total_tests: totalTests[0]?.count || 0,
       finished_tests: finishedCount,
+      pending_tests: pendingTests[0]?.count || 0,
       on_time: finishedTests[0]?.on_time || 0,
       exceeded: finishedTests[0]?.exceeded || 0,
       on_time_percentage:
