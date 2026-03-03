@@ -95,9 +95,9 @@ export async function GET(request: NextRequest) {
         COALESCE(SUM(s.duration_minutes), 0)::int as total_stop_duration
       FROM tests t
       LEFT JOIN stops s ON s.test_id = t.id
-      ${finishedWhereClause}
+      ${whereClause}
       GROUP BY t.id
-      ORDER BY t.finished_at DESC
+      ORDER BY t.created_at DESC
       LIMIT 50`
     )
 

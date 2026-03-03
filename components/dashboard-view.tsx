@@ -602,12 +602,12 @@ export function DashboardView() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Testes Recentes</CardTitle>
-            <CardDescription>Ultimos 50 testes finalizados</CardDescription>
+            <CardDescription>Ultimos 50 testes registrados</CardDescription>
           </CardHeader>
           <CardContent>
             {!data?.recent_tests || data.recent_tests.length === 0 ? (
               <p className="py-10 text-center text-sm text-muted-foreground">
-                Nenhum teste finalizado ainda
+                Nenhum teste registrado ainda
               </p>
             ) : (
               <div className="overflow-x-auto">
@@ -635,16 +635,36 @@ export function DashboardView() {
                         employee_id: string
                         bench: number
                         expected_duration_minutes: number
-                        actual_duration_minutes: number
+                        actual_duration_minutes: number | null
                         stop_count: number
                         total_stop_duration: number
-                        finished_at: string
+                        finished_at: string | null
+                        is_complete: boolean | null
+                        created_at: string
                       }) => {
-                        const withinTime =
-                          test.actual_duration_minutes <=
-                          test.expected_duration_minutes
+                        const isFinished = !!test.finished_at
+                        const isPaused = !isFinished && test.is_complete === false
+                        const isRunning = !isFinished && test.is_complete === null
+
+                        let statusLabel = "Em Andamento"
+                        let statusVariant: "default" | "destructive" | "secondary" | "outline" = "outline"
+                        let statusClass = "border-amber-500 text-amber-600"
+
+                        if (isFinished) {
+                          const withinTime =
+                            (test.actual_duration_minutes ?? 0) <=
+                            test.expected_duration_minutes
+                          statusLabel = withinTime ? "No Tempo" : "Excedeu"
+                          statusVariant = withinTime ? "default" : "destructive"
+                          statusClass = withinTime ? "bg-[#22a06b] text-white" : ""
+                        } else if (isPaused) {
+                          statusLabel = "Pausado"
+                          statusVariant = "secondary"
+                          statusClass = "bg-amber-100 text-amber-700 border-amber-300"
+                        }
+
                         return (
-                          <TableRow key={test.id}>
+                          <TableRow key={test.id} className={!isFinished ? "opacity-75" : ""}>
                             <TableCell className="font-medium">
                               {test.work_number}
                             </TableCell>
@@ -657,7 +677,9 @@ export function DashboardView() {
                               {formatDuration(test.expected_duration_minutes)}
                             </TableCell>
                             <TableCell>
-                              {formatDuration(test.actual_duration_minutes)}
+                              {test.actual_duration_minutes != null
+                                ? formatDuration(test.actual_duration_minutes)
+                                : "-"}
                             </TableCell>
                             <TableCell>{test.stop_count}</TableCell>
                             <TableCell>
@@ -667,27 +689,22 @@ export function DashboardView() {
                             </TableCell>
                             <TableCell>
                               <Badge
-                                variant={withinTime ? "default" : "destructive"}
-                                className={
-                                  withinTime
-                                    ? "bg-[#22a06b] text-white"
-                                    : ""
-                                }
+                                variant={statusVariant}
+                                className={statusClass}
                               >
-                                {withinTime ? "No Tempo" : "Excedeu"}
+                                {statusLabel}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground">
-                              {new Date(test.finished_at).toLocaleDateString(
-                                "pt-BR",
-                                {
-                                  day: "2-digit",
-                                  month: "2-digit",
-                                  year: "2-digit",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                }
-                              )}
+                              {new Date(
+                                test.finished_at || test.created_at
+                              ).toLocaleDateString("pt-BR", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
                             </TableCell>
                           </TableRow>
                         )
