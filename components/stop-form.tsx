@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -12,28 +11,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Card, CardContent } from "@/components/ui/card"
 import { STOP_TYPES } from "@/lib/constants"
-import { Plus, Loader2, Play, Square } from "lucide-react"
+import { Plus, Loader2, Play, Square, X, Clock } from "lucide-react"
 
 interface StopFormProps {
   testId: number
   onStopAdded: () => void
 }
 
+type Phase = "idle" | "timing" | "classify"
+
 export function StopForm({ testId, onStopAdded }: StopFormProps) {
-  const [stopType, setStopType] = useState("")
-  const [observations, setObservations] = useState("")
-  const [isRunning, setIsRunning] = useState(false)
+  const [phase, setPhase] = useState<Phase>("idle")
+
+  // cronometro
   const [startTime, setStartTime] = useState<number | null>(null)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
-  const [durationMinutes, setDurationMinutes] = useState<number | null>(null) // minutos a salvar
+  const [finalSeconds, setFinalSeconds] = useState(0)
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  // classificacao
+  const [stopType, setStopType] = useState("")
+  const [observations, setObservations] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // intervalo para atualizar a contagem visual
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
-
-  // limpa o intervalo quando o componente desmonta
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
@@ -49,31 +52,38 @@ export function StopForm({ testId, onStopAdded }: StopFormProps) {
       .padStart(2, "0")}:${s.toString().padStart(2, "0")}`
   }
 
-  const handleStart = () => {
+  const handleStartTimer = () => {
     setError(null)
-    setIsRunning(true)
+    setPhase("timing")
     const now = Date.now()
     setStartTime(now)
+    setElapsedSeconds(0)
 
-    // inicia contagem a cada segundo
     intervalRef.current = setInterval(() => {
       setElapsedSeconds(Math.floor((Date.now() - now) / 1000))
     }, 1000)
   }
 
-  const handleStop = () => {
+  const handleStopTimer = () => {
     if (!startTime) return
-
-    // limpa intervalo
     if (intervalRef.current) clearInterval(intervalRef.current)
 
     const totalSec = Math.floor((Date.now() - startTime) / 1000)
-    const totalMin = Math.floor(totalSec / 60) // arredonda para baixo
-    setDurationMinutes(totalMin)
+    setFinalSeconds(totalSec)
     setElapsedSeconds(totalSec)
-
-    setIsRunning(false)
     setStartTime(null)
+    setPhase("classify")
+  }
+
+  const handleCancel = () => {
+    if (intervalRef.current) clearInterval(intervalRef.current)
+    setPhase("idle")
+    setStartTime(null)
+    setElapsedSeconds(0)
+    setFinalSeconds(0)
+    setStopType("")
+    setObservations("")
+    setError(null)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -85,16 +95,7 @@ export function StopForm({ testId, onStopAdded }: StopFormProps) {
       return
     }
 
-    // garante que o cronômetro tenha sido finalizado
-    if (durationMinutes === null) {
-      setError("Inicie e finalize o cronômetro antes de salvar")
-      return
-    }
-
-    if (durationMinutes <= 0) {
-      setError("O tempo de parada deve ser maior que 0")
-      return
-    }
+    const durationMinutes = Math.max(1, Math.ceil(finalSeconds / 60))
 
     setIsSubmitting(true)
     try {
@@ -113,10 +114,11 @@ export function StopForm({ testId, onStopAdded }: StopFormProps) {
         throw new Error(data.error || "Erro ao registrar parada")
       }
 
-      // limpa estado para uma nova inserção
+      // limpa tudo e volta ao idle
+      setPhase("idle")
       setStopType("")
       setObservations("")
-      setDurationMinutes(null)
+      setFinalSeconds(0)
       setElapsedSeconds(0)
       onStopAdded()
     } catch (err) {
@@ -126,89 +128,143 @@ export function StopForm({ testId, onStopAdded }: StopFormProps) {
     }
   }
 
-  return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      {/* Tipo de parada */}
-      <div className="flex flex-col gap-2">
-        <Label className="text-sm font-medium text-foreground">
-          Tipo de Parada
-        </Label>
-        <Select value={stopType} onValueChange={setStopType}>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione o tipo de parada" />
-          </SelectTrigger>
-          <SelectContent>
-            {STOP_TYPES.map((type) => (
-              <SelectItem key={type} value={type}>
-                {type}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+  // FASE 1: Idle - botao para iniciar cronometro
+  if (phase === "idle") {
+    return (
+      <div className="flex flex-col items-center gap-3 py-2">
+        <p className="text-sm text-muted-foreground text-center">
+          Para registrar uma parada, inicie o cronometro primeiro.
+          Depois selecione o motivo.
+        </p>
+        <Button
+          type="button"
+          onClick={handleStartTimer}
+          size="lg"
+          className="gap-2"
+        >
+          <Play className="h-4 w-4" />
+          Iniciar Parada
+        </Button>
       </div>
+    )
+  }
 
-      {/* Cronômetro */}
-      {stopType && (
-        <div className="flex flex-col gap-2">
-          <Label className="text-sm font-medium text-foreground">
-            Cronômetro da Parada
-          </Label>
+  // FASE 2: Timing - cronometro rodando
+  if (phase === "timing") {
+    return (
+      <Card className="border-amber-500/50 bg-amber-500/5">
+        <CardContent className="flex flex-col items-center gap-4 py-6">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-3 w-3">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+              <span className="relative inline-flex h-3 w-3 rounded-full bg-amber-500" />
+            </span>
+            <p className="text-sm font-medium text-amber-700">
+              Parada em andamento
+            </p>
+          </div>
 
-          {/* Exibição do tempo */}
-          <div className="text-lg font-mono">
+          <div className="font-mono text-4xl font-bold tracking-wider text-foreground">
             {formatTime(elapsedSeconds)}
           </div>
 
-          {/* Botões de controle */}
-          {!isRunning ? (
+          <div className="flex items-center gap-3">
             <Button
               type="button"
-              onClick={handleStart}
-              disabled={isSubmitting}
-              variant="default"
-            >
-              <Play className="mr-2 h-4 w-4" />
-              Iniciar
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              onClick={handleStop}
-              disabled={isSubmitting}
+              onClick={handleStopTimer}
               variant="destructive"
+              size="lg"
+              className="gap-2"
             >
-              <Square className="mr-2 h-4 w-4" />
-              Parar
+              <Square className="h-4 w-4" />
+              Parar e Classificar
             </Button>
-          )}
+            <Button
+              type="button"
+              onClick={handleCancel}
+              variant="ghost"
+              size="sm"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // FASE 3: Classify - selecionar tipo e salvar
+  return (
+    <Card className="border-primary/30 bg-primary/5">
+      <CardContent className="flex flex-col gap-4 py-6">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-medium text-foreground">
+            Classifique a parada
+          </p>
+          <div className="flex items-center gap-1.5 rounded-md bg-muted px-2.5 py-1">
+            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="font-mono text-sm font-semibold text-foreground">
+              {formatTime(finalSeconds)}
+            </span>
+          </div>
         </div>
-      )}
 
-      {/* Observações (opcional) */}
-      <div className="flex flex-col gap-2">
-        <Label className="text-sm font-medium text-foreground">
-          Observações <span className="font-normal text-muted-foreground">(opcional)</span>
-        </Label>
-        <Textarea
-          placeholder="Adicione detalhes sobre a parada..."
-          value={observations}
-          onChange={(e) => setObservations(e.target.value)}
-          rows={2}
-        />
-      </div>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {/* Tipo de parada */}
+          <div className="flex flex-col gap-2">
+            <Label className="text-sm font-medium text-foreground">
+              Tipo de Parada
+            </Label>
+            <Select value={stopType} onValueChange={setStopType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o motivo da parada" />
+              </SelectTrigger>
+              <SelectContent>
+                {STOP_TYPES.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      {/* Mensagem de erro */}
-      {error && <p className="text-sm text-destructive">{error}</p>}
+          {/* Observacoes */}
+          <div className="flex flex-col gap-2">
+            <Label className="text-sm font-medium text-foreground">
+              Observacoes{" "}
+              <span className="font-normal text-muted-foreground">(opcional)</span>
+            </Label>
+            <Textarea
+              placeholder="Adicione detalhes sobre a parada..."
+              value={observations}
+              onChange={(e) => setObservations(e.target.value)}
+              rows={2}
+            />
+          </div>
 
-      {/* Botão de enviar */}
-      <Button type="submit" variant="outline" disabled={isSubmitting}>
-        {isSubmitting ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        ) : (
-          <Plus className="mr-2 h-4 w-4" />
-        )}
-        Adicionar Parada
-      </Button>
-    </form>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+
+          <div className="flex items-center gap-2">
+            <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
+              Salvar Parada
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleCancel}
+              disabled={isSubmitting}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   )
 }
