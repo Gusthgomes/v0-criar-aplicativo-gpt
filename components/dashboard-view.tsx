@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import useSWR from "swr"
 import {
   Bar,
@@ -92,9 +93,19 @@ const emptyFilters: FilterState = {
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
 export function DashboardView() {
+  const router = useRouter()
   const [filters, setFilters] = useState<FilterState>(emptyFilters)
   const [appliedFilters, setAppliedFilters] = useState<FilterState>(emptyFilters)
   const [showFilters, setShowFilters] = useState(false)
+
+  const handleStopBarClick = useCallback(
+    (data: { stop_type?: string }) => {
+      if (data?.stop_type) {
+        router.push(`/paradas?type=${encodeURIComponent(data.stop_type)}`)
+      }
+    },
+    [router]
+  )
 
   const url = useMemo(() => buildQueryString(appliedFilters), [appliedFilters])
   const { data, error, isLoading } = useSWR(url, fetcher)
@@ -355,7 +366,7 @@ export function DashboardView() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Paradas Mais Comuns</CardTitle>
-              <CardDescription>Top 10 tipos de parada registrados</CardDescription>
+              <CardDescription>Top 10 tipos de parada registrados - clique em uma barra para ver as obras</CardDescription>
             </CardHeader>
             <CardContent>
               {stopsByType.length === 0 ? (
@@ -374,6 +385,12 @@ export function DashboardView() {
                       data={stopsByType}
                       layout="vertical"
                       margin={{ top: 5, right: 20, left: 5, bottom: 5 }}
+                      onClick={(state) => {
+                        if (state?.activePayload?.[0]?.payload) {
+                          handleStopBarClick(state.activePayload[0].payload)
+                        }
+                      }}
+                      style={{ cursor: "pointer" }}
                     >
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                       <XAxis type="number" />
@@ -384,13 +401,14 @@ export function DashboardView() {
                         tick={{ fontSize: 11 }}
                       />
                       <Tooltip
-                        formatter={(value: number) => [`${value}`, "Quantidade"]}
+                        formatter={(value: number) => [`${value}  -  Clique para ver obras`, "Quantidade"]}
                       />
                       <Bar dataKey="count" radius={[0, 4, 4, 0]}>
                         {stopsByType.map((_: unknown, index: number) => (
                           <Cell
                             key={`cell-${index}`}
                             fill={index < 3 ? CHART_RED : CHART_BLUE}
+                            className="cursor-pointer"
                           />
                         ))}
                       </Bar>
