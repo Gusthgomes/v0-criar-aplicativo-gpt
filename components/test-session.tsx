@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import useSWR from "swr"
 import { Button } from "@/components/ui/button"
@@ -20,9 +20,12 @@ import {
 import { TestTimer } from "@/components/test-timer"
 import { StopForm } from "@/components/stop-form"
 import { StopsList } from "@/components/stops-list"
+import { ConnectionBanner } from "@/components/connection-banner"
 import { formatDuration } from "@/lib/constants"
 import { AppHeader } from "@/components/app-header"
+import { useOfflineQueue, useTimerAutoSave } from "@/hooks/use-offline-queue"
 import { Square, Loader2, User, Wrench, Hash, Timer, Moon } from "lucide-react"
+import { toast } from "sonner"
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
@@ -37,15 +40,37 @@ export function TestSession({ testId }: TestSessionProps) {
   const [isComplete, setIsComplete] = useState<"yes" | "no">("yes")
   const [dialogOpen, setDialogOpen] = useState(false)
 
+  const { isOnline, isSyncing, queueCount, resilientFetch, processQueue } =
+    useOfflineQueue()
+  const { save: saveTimer, clear: clearTimer } = useTimerAutoSave(testId)
+
   const { data: test, error, mutate } = useSWR(
     `/api/tests/${testId}`,
     fetcher,
-    { refreshInterval: 5000 }
+    {
+      refreshInterval: isOnline ? 5000 : 0,
+      revalidateOnFocus: false,
+      shouldRetryOnError: isOnline,
+    }
   )
 
-  const handleElapsedChange = useCallback((seconds: number) => {
-    setElapsedSeconds(seconds)
-  }, [])
+  const handleElapsedChange = useCallback(
+    (seconds: number) => {
+      setElapsedSeconds(seconds)
+      // Auto-save a cada 10 segundos
+      if (seconds % 10 === 0) {
+        saveTimer(seconds)
+      }
+    },
+    [saveTimer]
+  )
+
+  // Tentar sincronizar quando voltar online
+  useEffect(() => {
+    if (isOnline && queueCount > 0) {
+      processQueue().then(() => mutate())
+    }
+  }, [isOnline, queueCount, processQueue, mutate])
 
   async function handleFinish() {
     setIsFinishing(true)
@@ -53,31 +78,44 @@ export function TestSession({ testId }: TestSessionProps) {
       const actualMinutes = Math.ceil(elapsedSeconds / 60)
       const complete = isComplete === "yes"
 
-      const res = await fetch(`/api/tests/${testId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          actual_duration_minutes: actualMinutes,
-          is_complete: complete,
-          elapsed_seconds_at_pause: complete ? null : elapsedSeconds,
-        }),
-      })
+      const result = await resilientFetch(
+        `/api/tests/${testId}`,
+        {
+          method: "PATCH",
+          body: {
+            actual_duration_minutes: actualMinutes,
+            is_complete: complete,
+            elapsed_seconds_at_pause: complete ? null : elapsedSeconds,
+          },
+          description: complete
+            ? `Encerrar teste #${testId}`
+            : `Pausar teste #${testId}`,
+        },
+        () => mutate()
+      )
 
-      if (!res.ok) {
+      if (result.queued) {
+        toast.info("Sem conexao. O encerramento sera sincronizado automaticamente quando a internet voltar.")
+        clearTimer()
+        setTimeout(() => {
+          router.push(complete ? "/?finished=true" : "/?paused=true")
+        }, 1500)
+        return
+      }
+
+      if (!result.ok) {
         throw new Error("Erro ao encerrar teste")
       }
 
-      if (complete) {
-        router.push("/?finished=true")
-      } else {
-        router.push("/?paused=true")
-      }
+      clearTimer()
+      router.push(complete ? "/?finished=true" : "/?paused=true")
     } catch {
+      toast.error("Erro ao encerrar teste")
       setIsFinishing(false)
     }
   }
 
-  if (error) {
+  if (error && isOnline) {
     return (
       <div className="flex min-h-screen flex-col bg-background">
         <AppHeader />
@@ -99,6 +137,12 @@ export function TestSession({ testId }: TestSessionProps) {
     return (
       <div className="flex min-h-screen flex-col bg-background">
         <AppHeader />
+        <ConnectionBanner
+          isOnline={isOnline}
+          isSyncing={isSyncing}
+          queueCount={queueCount}
+          onRetrySync={processQueue}
+        />
         <main className="flex flex-1 items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </main>
@@ -112,6 +156,12 @@ export function TestSession({ testId }: TestSessionProps) {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <AppHeader />
+      <ConnectionBanner
+        isOnline={isOnline}
+        isSyncing={isSyncing}
+        queueCount={queueCount}
+        onRetrySync={processQueue}
+      />
       <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6">
         {/* Info do teste */}
         <Card>
@@ -300,7 +350,11 @@ export function TestSession({ testId }: TestSessionProps) {
           </CardHeader>
           <CardContent className="flex flex-col gap-6">
             {!isFinished && (
-              <StopForm testId={testId} onStopAdded={() => mutate()} />
+              <StopForm
+                testId={testId}
+                onStopAdded={() => mutate()}
+                isOnline={isOnline}
+              />
             )}
             <StopsList stops={test.stops || []} />
           </CardContent>

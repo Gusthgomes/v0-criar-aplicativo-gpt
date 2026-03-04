@@ -13,16 +13,19 @@ import {
 } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
 import { STOP_TYPES } from "@/lib/constants"
-import { Plus, Loader2, Play, Square, X, Clock } from "lucide-react"
+import { useOfflineQueue } from "@/hooks/use-offline-queue"
+import { Plus, Loader2, Play, Square, X, Clock, WifiOff } from "lucide-react"
+import { toast } from "sonner"
 
 interface StopFormProps {
   testId: number
   onStopAdded: () => void
+  isOnline?: boolean
 }
 
 type Phase = "idle" | "timing" | "classify"
 
-export function StopForm({ testId, onStopAdded }: StopFormProps) {
+export function StopForm({ testId, onStopAdded, isOnline = true }: StopFormProps) {
   const [phase, setPhase] = useState<Phase>("idle")
 
   // cronometro
@@ -36,6 +39,8 @@ export function StopForm({ testId, onStopAdded }: StopFormProps) {
   const [observations, setObservations] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const { resilientFetch } = useOfflineQueue()
 
   useEffect(() => {
     return () => {
@@ -99,28 +104,41 @@ export function StopForm({ testId, onStopAdded }: StopFormProps) {
 
     setIsSubmitting(true)
     try {
-      const res = await fetch(`/api/tests/${testId}/stops`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          stop_type: stopType,
-          observations: observations.trim() || null,
-          duration_minutes: durationMinutes,
-        }),
-      })
+      const result = await resilientFetch(
+        `/api/tests/${testId}/stops`,
+        {
+          method: "POST",
+          body: {
+            stop_type: stopType,
+            observations: observations.trim() || null,
+            duration_minutes: durationMinutes,
+          },
+          description: `Parada: ${stopType} (${durationMinutes}min)`,
+        },
+        () => onStopAdded()
+      )
 
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || "Erro ao registrar parada")
+      if (result.queued) {
+        toast.info("Parada salva localmente. Sera sincronizada quando a conexao voltar.", {
+          icon: <WifiOff className="h-4 w-4" />,
+        })
       }
 
-      // limpa tudo e volta ao idle
+      if (!result.ok && !result.queued) {
+        const errData = result.data as { error?: string }
+        throw new Error(errData?.error || "Erro ao registrar parada")
+      }
+
+      // Limpa tudo e volta ao idle
       setPhase("idle")
       setStopType("")
       setObservations("")
       setFinalSeconds(0)
       setElapsedSeconds(0)
-      onStopAdded()
+
+      if (!result.queued) {
+        onStopAdded()
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro desconhecido")
     } finally {
@@ -128,7 +146,7 @@ export function StopForm({ testId, onStopAdded }: StopFormProps) {
     }
   }
 
-  // FASE 1: Idle - botao para iniciar cronometro
+  // FASE 1: Idle
   if (phase === "idle") {
     return (
       <div className="flex flex-col items-center gap-3 py-2">
@@ -136,6 +154,14 @@ export function StopForm({ testId, onStopAdded }: StopFormProps) {
           Para registrar uma parada, inicie o cronometro primeiro.
           Depois selecione o motivo.
         </p>
+        {!isOnline && (
+          <div className="flex items-center gap-1.5 rounded-md bg-destructive/10 px-3 py-1.5">
+            <WifiOff className="h-3.5 w-3.5 text-destructive" />
+            <span className="text-xs font-medium text-destructive">
+              Offline - paradas serao salvas localmente
+            </span>
+          </div>
+        )}
         <Button
           type="button"
           onClick={handleStartTimer}
@@ -149,7 +175,7 @@ export function StopForm({ testId, onStopAdded }: StopFormProps) {
     )
   }
 
-  // FASE 2: Timing - cronometro rodando
+  // FASE 2: Timing
   if (phase === "timing") {
     return (
       <Card className="border-amber-500/50 bg-amber-500/5">
@@ -162,6 +188,9 @@ export function StopForm({ testId, onStopAdded }: StopFormProps) {
             <p className="text-sm font-medium text-amber-700">
               Parada em andamento
             </p>
+            {!isOnline && (
+              <WifiOff className="h-3.5 w-3.5 text-destructive" />
+            )}
           </div>
 
           <div className="font-mono text-4xl font-bold tracking-wider text-foreground">
@@ -193,7 +222,7 @@ export function StopForm({ testId, onStopAdded }: StopFormProps) {
     )
   }
 
-  // FASE 3: Classify - selecionar tipo e salvar
+  // FASE 3: Classify
   return (
     <Card className="border-primary/30 bg-primary/5">
       <CardContent className="flex flex-col gap-4 py-6">
@@ -209,8 +238,16 @@ export function StopForm({ testId, onStopAdded }: StopFormProps) {
           </div>
         </div>
 
+        {!isOnline && (
+          <div className="flex items-center gap-1.5 rounded-md bg-destructive/10 px-3 py-1.5">
+            <WifiOff className="h-3.5 w-3.5 text-destructive" />
+            <span className="text-xs font-medium text-destructive">
+              Offline - a parada sera salva localmente e sincronizada depois
+            </span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {/* Tipo de parada */}
           <div className="flex flex-col gap-2">
             <Label className="text-sm font-medium text-foreground">
               Tipo de Parada
@@ -229,7 +266,6 @@ export function StopForm({ testId, onStopAdded }: StopFormProps) {
             </Select>
           </div>
 
-          {/* Observacoes */}
           <div className="flex flex-col gap-2">
             <Label className="text-sm font-medium text-foreground">
               Observacoes{" "}
