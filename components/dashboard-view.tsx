@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import Link from "next/link"
 import useSWR from "swr"
 import {
   Bar,
@@ -674,7 +675,12 @@ export function DashboardView() {
                         return (
                           <TableRow key={test.id} className={!isFinished ? "opacity-75" : ""}>
                             <TableCell className="font-medium">
-                              {test.work_number}
+                              <Link
+                                href={`/consulta?obra=${test.work_number}`}
+                                className="text-primary underline-offset-4 hover:underline"
+                              >
+                                {test.work_number}
+                              </Link>
                             </TableCell>
                             <TableCell>{test.model}</TableCell>
                             <TableCell className="font-mono text-xs">

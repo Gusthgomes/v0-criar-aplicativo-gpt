@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import useSWR from "swr"
 import {
   Card,
@@ -46,8 +47,18 @@ const fetcher = (url: string) =>
   })
 
 export function WorkSearchView() {
-  const [inputValue, setInputValue] = useState("")
-  const [searchTerm, setSearchTerm] = useState<string | null>(null)
+  const searchParams = useSearchParams()
+  const obraParam = searchParams.get("obra")
+
+  const [inputValue, setInputValue] = useState(obraParam || "")
+  const [searchTerm, setSearchTerm] = useState<string | null>(obraParam || null)
+
+  useEffect(() => {
+    if (obraParam && /^\d{3,6}$/.test(obraParam)) {
+      setInputValue(obraParam)
+      setSearchTerm(obraParam)
+    }
+  }, [obraParam])
 
   const { data, error, isLoading } = useSWR(
     searchTerm ? `/api/works/${searchTerm}` : null,
