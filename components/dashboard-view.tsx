@@ -26,6 +26,12 @@ import {
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -56,6 +62,8 @@ import {
   Filter,
   X,
   ShieldCheck,
+  ChevronDown,
+  Check,
 } from "lucide-react"
 
 const CHART_BLUE = "#3b5998"
@@ -271,35 +279,96 @@ export function DashboardView() {
                   <Label className="text-xs font-medium text-muted-foreground">
                     Modelos
                   </Label>
-                  <div className="flex flex-wrap gap-2 rounded-md border border-input bg-background p-2">
-                    {MODELS.map((m) => (
-                      <label
-                        key={m}
-                        className="flex cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-sm hover:bg-muted"
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-between font-normal"
                       >
-                        <input
-                          type="checkbox"
-                          checked={filters.models.includes(m)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setFilters((f) => ({ ...f, models: [...f.models, m] }))
-                            } else {
-                              setFilters((f) => ({
-                                ...f,
-                                models: f.models.filter((x) => x !== m),
-                              }))
-                            }
-                          }}
-                          className="h-4 w-4 rounded border-gray-300"
-                        />
-                        {m}
-                      </label>
-                    ))}
-                  </div>
+                        {filters.models.length === 0 ? (
+                          <span className="text-muted-foreground">Todos os modelos</span>
+                        ) : filters.models.length <= 3 ? (
+                          <span>{filters.models.join(", ")}</span>
+                        ) : (
+                          <span>{filters.models.length} modelos selecionados</span>
+                        )}
+                        <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-56 p-0" align="start">
+                      <div className="p-2">
+                        <div className="mb-2 flex items-center justify-between border-b pb-2">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            Selecione os modelos
+                          </span>
+                          {filters.models.length > 0 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-xs"
+                              onClick={() => setFilters((f) => ({ ...f, models: [] }))}
+                            >
+                              Limpar
+                            </Button>
+                          )}
+                        </div>
+                        <div className="space-y-1">
+                          {MODELS.map((m) => {
+                            const isSelected = filters.models.includes(m)
+                            return (
+                              <div
+                                key={m}
+                                className={`flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-muted ${
+                                  isSelected ? "bg-primary/10" : ""
+                                }`}
+                                onClick={() => {
+                                  if (isSelected) {
+                                    setFilters((f) => ({
+                                      ...f,
+                                      models: f.models.filter((x) => x !== m),
+                                    }))
+                                  } else {
+                                    setFilters((f) => ({
+                                      ...f,
+                                      models: [...f.models, m],
+                                    }))
+                                  }
+                                }}
+                              >
+                                <Checkbox
+                                  checked={isSelected}
+                                  className="pointer-events-none"
+                                />
+                                <span className="flex-1 text-sm">{m}</span>
+                                {isSelected && (
+                                  <Check className="h-4 w-4 text-primary" />
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                   {filters.models.length > 0 && (
-                    <span className="text-xs text-muted-foreground">
-                      Selecionados: {filters.models.join(", ")}
-                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {filters.models.map((m) => (
+                        <Badge
+                          key={m}
+                          variant="secondary"
+                          className="cursor-pointer gap-1 pr-1 text-xs"
+                          onClick={() =>
+                            setFilters((f) => ({
+                              ...f,
+                              models: f.models.filter((x) => x !== m),
+                            }))
+                          }
+                        >
+                          {m}
+                          <X className="h-3 w-3" />
+                        </Badge>
+                      ))}
+                    </div>
                   )}
                 </div>
                 <div className="flex flex-col gap-1.5">
