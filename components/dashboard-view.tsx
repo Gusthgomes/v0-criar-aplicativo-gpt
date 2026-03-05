@@ -5,16 +5,17 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import useSWR from "swr"
 import {
-  Bar,
   BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
-  ResponsiveContainer,
-  Cell,
   Tooltip,
+  ResponsiveContainer,
   Legend,
-  ReferenceLine,
+  Cell,
+  PieChart,
+  Pie,
 } from "recharts"
 import {
   Card,
@@ -68,8 +69,9 @@ function buildQueryString(filters: FilterState): string {
   if (filters.dateFrom) params.set("date_from", filters.dateFrom)
   if (filters.dateTo) params.set("date_to", filters.dateTo)
   if (filters.bench) params.set("bench", filters.bench)
-  if (filters.model) params.set("model", filters.model)
+  if (filters.models.length > 0) params.set("models", filters.models.join(","))
   if (filters.employeeId) params.set("employee_id", filters.employeeId)
+  if (filters.status) params.set("status", filters.status)
   const qs = params.toString()
   return `/api/dashboard${qs ? `?${qs}` : ""}`
 }
@@ -78,16 +80,18 @@ interface FilterState {
   dateFrom: string
   dateTo: string
   bench: string
-  model: string
+  models: string[]
   employeeId: string
+  status: string
 }
 
 const emptyFilters: FilterState = {
   dateFrom: "",
   dateTo: "",
   bench: "",
-  model: "",
+  models: [],
   employeeId: "",
+  status: "",
 }
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
@@ -110,7 +114,12 @@ export function DashboardView() {
   const url = useMemo(() => buildQueryString(appliedFilters), [appliedFilters])
   const { data, error, isLoading } = useSWR(url, fetcher)
 
-  const hasActiveFilters = Object.values(appliedFilters).some((v) => v !== "")
+  const hasActiveFilters = appliedFilters.dateFrom !== "" || 
+    appliedFilters.dateTo !== "" || 
+    appliedFilters.bench !== "" || 
+    appliedFilters.models.length > 0 || 
+    appliedFilters.employeeId !== "" || 
+    appliedFilters.status !== ""
 
   function applyFilters() {
     setAppliedFilters({ ...filters })
@@ -260,12 +269,47 @@ export function DashboardView() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label className="text-xs font-medium text-muted-foreground">
-                    Modelo
+                    Modelos
+                  </Label>
+                  <div className="flex flex-wrap gap-2 rounded-md border border-input bg-background p-2">
+                    {MODELS.map((m) => (
+                      <label
+                        key={m}
+                        className="flex cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-sm hover:bg-muted"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={filters.models.includes(m)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFilters((f) => ({ ...f, models: [...f.models, m] }))
+                            } else {
+                              setFilters((f) => ({
+                                ...f,
+                                models: f.models.filter((x) => x !== m),
+                              }))
+                            }
+                          }}
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
+                        {m}
+                      </label>
+                    ))}
+                  </div>
+                  {filters.models.length > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      Selecionados: {filters.models.join(", ")}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">
+                    Status
                   </Label>
                   <Select
-                    value={filters.model}
+                    value={filters.status || "all"}
                     onValueChange={(v) =>
-                      setFilters((f) => ({ ...f, model: v === "all" ? "" : v }))
+                      setFilters((f) => ({ ...f, status: v === "all" ? "" : v }))
                     }
                   >
                     <SelectTrigger>
@@ -273,11 +317,9 @@ export function DashboardView() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos</SelectItem>
-                      {MODELS.map((m) => (
-                        <SelectItem key={m} value={m}>
-                          {m}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="finished">Finalizados</SelectItem>
+                      <SelectItem value="pending">Em Andamento</SelectItem>
+                      <SelectItem value="paused">Pausados</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -467,79 +509,125 @@ export function DashboardView() {
             </CardContent>
           </Card>
 
-          {/* NOVO: Tempo Esperado vs Realizado */}
-          <Card className="md:col-span-2">
+          {/* Gráfico Pizza M76 */}
+          <Card>
             <CardHeader>
               <CardTitle className="text-base">
-                Tempo de Teste: Esperado vs Realizado
+                Tempo de Teste: M76
               </CardTitle>
               <CardDescription>
-                Comparacao entre o tempo estipulado por modelo e o tempo medio real dos testes
+                No tempo vs Excedeu para modelo M76
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {expectedVsActual.length === 0 ? (
-                <p className="py-10 text-center text-sm text-muted-foreground">
-                  Sem dados disponiveis
-                </p>
-              ) : (
-                <ChartContainer
-                  config={{
-                    expected: { label: "Estipulado", color: CHART_BLUE },
-                    actual: { label: "Realizado (media)", color: CHART_AMBER },
-                  }}
-                  className="h-[300px]"
-                >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={expectedVsActual}
-                      margin={{ top: 5, right: 30, left: 5, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="model" tick={{ fontSize: 12 }} />
-                      <YAxis
-                        label={{
-                          value: "Minutos",
-                          angle: -90,
-                          position: "insideLeft",
-                          style: { fontSize: 11 },
-                        }}
-                      />
-                      <Tooltip
-                        formatter={(value: number, name: string) => [
-                          `${value} min (${formatDuration(value)})`,
-                          name === "expected" ? "Estipulado" : "Realizado (media)",
-                        ]}
-                      />
-                      <Legend
-                        formatter={(value: string) =>
-                          value === "expected" ? "Estipulado" : "Realizado (media)"
-                        }
-                      />
-                      <Bar
-                        dataKey="expected"
-                        fill={CHART_BLUE}
-                        radius={[4, 4, 0, 0]}
-                        name="expected"
-                      />
-                      <Bar
-                        dataKey="actual"
-                        radius={[4, 4, 0, 0]}
-                        name="actual"
-                      >
-                        {expectedVsActual.map(
-                          (entry: { expected: number; actual: number }, index: number) => (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={entry.actual > entry.expected ? CHART_RED : CHART_GREEN}
-                            />
-                          )
-                        )}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
-              )}
+              {(() => {
+                const m76Data = testsByModel.find((t: { model: string }) => t.model === "M76")
+                if (!m76Data || (m76Data.on_time === 0 && m76Data.exceeded === 0)) {
+                  return (
+                    <p className="py-10 text-center text-sm text-muted-foreground">
+                      Sem dados para M76
+                    </p>
+                  )
+                }
+                const pieData = [
+                  { name: "No Tempo", value: m76Data.on_time, fill: CHART_GREEN },
+                  { name: "Excedeu", value: m76Data.exceeded, fill: CHART_RED },
+                ]
+                const total = m76Data.on_time + m76Data.exceeded
+                return (
+                  <ChartContainer
+                    config={{
+                      onTime: { label: "No Tempo", color: CHART_GREEN },
+                      exceeded: { label: "Excedeu", color: CHART_RED },
+                    }}
+                    className="h-[250px]"
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={80}
+                          paddingAngle={2}
+                          dataKey="value"
+                          label={({ name, value }) => `${name}: ${value} (${Math.round((value / total) * 100)}%)`}
+                        >
+                          {pieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value: number) => [`${value} testes`, ""]} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                )
+              })()}
+            </CardContent>
+          </Card>
+
+          {/* Gráfico Pizza M73, M74, M75, M77 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                Tempo de Teste: M73, M74, M75, M77
+              </CardTitle>
+              <CardDescription>
+                No tempo vs Excedeu para modelos M73, M74, M75 e M77
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const targetModels = ["M73", "M74", "M75", "M77"]
+                const filteredData = testsByModel.filter((t: { model: string }) => 
+                  targetModels.includes(t.model)
+                )
+                const totalOnTime = filteredData.reduce((sum: number, t: { on_time: number }) => sum + t.on_time, 0)
+                const totalExceeded = filteredData.reduce((sum: number, t: { exceeded: number }) => sum + t.exceeded, 0)
+                
+                if (totalOnTime === 0 && totalExceeded === 0) {
+                  return (
+                    <p className="py-10 text-center text-sm text-muted-foreground">
+                      Sem dados para M73, M74, M75, M77
+                    </p>
+                  )
+                }
+                const pieData = [
+                  { name: "No Tempo", value: totalOnTime, fill: CHART_GREEN },
+                  { name: "Excedeu", value: totalExceeded, fill: CHART_RED },
+                ]
+                const total = totalOnTime + totalExceeded
+                return (
+                  <ChartContainer
+                    config={{
+                      onTime: { label: "No Tempo", color: CHART_GREEN },
+                      exceeded: { label: "Excedeu", color: CHART_RED },
+                    }}
+                    className="h-[250px]"
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={80}
+                          paddingAngle={2}
+                          dataKey="value"
+                          label={({ name, value }) => `${name}: ${value} (${Math.round((value / total) * 100)}%)`}
+                        >
+                          {pieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value: number) => [`${value} testes`, ""]} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                )
+              })()}
             </CardContent>
           </Card>
         </div>

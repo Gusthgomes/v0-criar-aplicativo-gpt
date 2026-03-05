@@ -10,8 +10,9 @@ export async function GET(request: NextRequest) {
     const dateFrom = searchParams.get("date_from")
     const dateTo = searchParams.get("date_to")
     const bench = searchParams.get("bench")
-    const model = searchParams.get("model")
+    const models = searchParams.get("models") // comma-separated list
     const employeeId = searchParams.get("employee_id")
+    const status = searchParams.get("status") // "finished", "pending", "paused"
 
     // Build filter conditions dynamically
     const conditions: string[] = []
@@ -28,11 +29,19 @@ export async function GET(request: NextRequest) {
     if (bench) {
       conditions.push(`t.bench = ${parseInt(bench, 10)}`)
     }
-    if (model) {
-      conditions.push(`t.model = '${model}'`)
+    if (models) {
+      const modelList = models.split(",").map(m => `'${m.trim()}'`).join(",")
+      conditions.push(`t.model IN (${modelList})`)
     }
     if (employeeId) {
       conditions.push(`t.employee_id = '${employeeId}'`)
+    }
+    if (status === "finished") {
+      conditions.push(`t.finished_at IS NOT NULL`)
+    } else if (status === "pending") {
+      conditions.push(`t.finished_at IS NULL AND t.is_complete IS NULL`)
+    } else if (status === "paused") {
+      conditions.push(`t.finished_at IS NULL AND t.is_complete = false`)
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : ""
