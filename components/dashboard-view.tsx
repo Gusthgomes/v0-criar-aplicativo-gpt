@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import useSWR from "swr"
 import {
   BarChart,
@@ -104,11 +104,53 @@ const emptyFilters: FilterState = {
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
+function parseFiltersFromURL(searchParams: URLSearchParams): FilterState {
+  return {
+    dateFrom: searchParams.get("date_from") || "",
+    dateTo: searchParams.get("date_to") || "",
+    bench: searchParams.get("bench") || "",
+    models: searchParams.get("models")?.split(",").filter(Boolean) || [],
+    employeeId: searchParams.get("employee_id") || "",
+    status: searchParams.get("status") || "",
+  }
+}
+
+function buildURLQueryString(filters: FilterState): string {
+  const params = new URLSearchParams()
+  if (filters.dateFrom) params.set("date_from", filters.dateFrom)
+  if (filters.dateTo) params.set("date_to", filters.dateTo)
+  if (filters.bench) params.set("bench", filters.bench)
+  if (filters.models.length > 0) params.set("models", filters.models.join(","))
+  if (filters.employeeId) params.set("employee_id", filters.employeeId)
+  if (filters.status) params.set("status", filters.status)
+  const qs = params.toString()
+  return qs ? `?${qs}` : ""
+}
+
 export function DashboardView() {
   const router = useRouter()
-  const [filters, setFilters] = useState<FilterState>(emptyFilters)
-  const [appliedFilters, setAppliedFilters] = useState<FilterState>(emptyFilters)
-  const [showFilters, setShowFilters] = useState(false)
+  const searchParams = useSearchParams()
+  
+  // Inicializa os filtros a partir da URL
+  const initialFilters = useMemo(() => parseFiltersFromURL(searchParams), [searchParams])
+  
+  const [filters, setFilters] = useState<FilterState>(initialFilters)
+  const [appliedFilters, setAppliedFilters] = useState<FilterState>(initialFilters)
+  const [showFilters, setShowFilters] = useState(
+    initialFilters.dateFrom !== "" || 
+    initialFilters.dateTo !== "" || 
+    initialFilters.bench !== "" || 
+    initialFilters.models.length > 0 || 
+    initialFilters.employeeId !== "" || 
+    initialFilters.status !== ""
+  )
+
+  // Sincroniza filtros quando a URL muda (ex: botao voltar)
+  useEffect(() => {
+    const urlFilters = parseFiltersFromURL(searchParams)
+    setFilters(urlFilters)
+    setAppliedFilters(urlFilters)
+  }, [searchParams])
 
   const handleStopBarClick = useCallback(
     (data: { stop_type?: string }) => {
@@ -129,13 +171,18 @@ export function DashboardView() {
     appliedFilters.employeeId !== "" || 
     appliedFilters.status !== ""
 
-  function applyFilters() {
+function applyFilters() {
     setAppliedFilters({ ...filters })
+    // Atualiza a URL com os filtros aplicados
+    const queryString = buildURLQueryString(filters)
+    router.push(`/dashboard${queryString}`, { scroll: false })
   }
-
+  
   function clearFilters() {
     setFilters(emptyFilters)
     setAppliedFilters(emptyFilters)
+    // Limpa a URL
+    router.push("/dashboard", { scroll: false })
   }
 
   if (isLoading && !data) {
