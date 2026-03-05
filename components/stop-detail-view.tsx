@@ -153,7 +153,11 @@ export function StopDetailView() {
                     Nenhuma obra encontrada
                   </p>
                 ) : (
-                  <Accordion type="multiple" className="w-full">
+                  <Accordion 
+                    type="multiple" 
+                    className="w-full"
+                    defaultValue={data.works.map((w: { work_number: string }) => w.work_number)}
+                  >
                     {data.works.map(
                       (work: {
                         work_number: string
