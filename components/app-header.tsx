@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ExportDialog } from "@/components/export-dialog"
-import { BarChart3, ClipboardList, Search } from "lucide-react"
+import { BarChart3, ClipboardList, Search, Sparkles } from "lucide-react"
 
 export function AppHeader() {
   const pathname = usePathname()
@@ -44,6 +44,14 @@ export function AppHeader() {
               <Link href="/dashboard" className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4" />
                 <span className="hidden sm:inline">Dashboard</span>
+              </Link>
+            </Button>
+          )}
+          {pathname !== "/assistente" && (
+            <Button variant="default" size="sm" asChild>
+              <Link href="/assistente" className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4" />
+                <span className="hidden sm:inline">Assistente</span>
               </Link>
             </Button>
           )}
