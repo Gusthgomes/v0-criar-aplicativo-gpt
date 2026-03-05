@@ -115,9 +115,10 @@ export async function GET(request: NextRequest) {
         ? (totalStops[0]?.count || 0) / finishedCount
         : 0
 
-    // Obras aprovadas no primeiro teste (excluindo paradas nao-relevantes)
-    // Uma obra e "aprovada no 1o teste" se o primeiro teste (por data) terminou no tempo,
-    // e nao teve paradas relevantes (exclui Refeicao, Apoio tecnico, PTE PCO PFI ZETE, Parada pessoal, GD)
+    // Obras aprovadas no primeiro teste
+    // Uma obra é "não aprovada no 1º teste" se teve alguma dessas paradas:
+    // Erro de montagem, Erro de fornecedor, Retrabalho, Erro de especificação, Material trocado
+    // Todas as demais paradas NÃO reprovam a obra
     const firstTestApproval = await sql(
       `WITH first_tests AS (
         SELECT DISTINCT ON (t.work_number)
@@ -131,27 +132,26 @@ export async function GET(request: NextRequest) {
         ${finishedWhereClause}
         ORDER BY t.work_number, t.created_at ASC
       ),
-      relevant_stops AS (
-        SELECT ft.id as test_id, COUNT(s.id)::int as relevant_stop_count
+      failing_stops AS (
+        SELECT ft.id as test_id, COUNT(s.id)::int as fail_stop_count
         FROM first_tests ft
         LEFT JOIN stops s ON s.test_id = ft.id
-          AND s.stop_type NOT IN ('Refeição', 'Apoio técnico', 'PTE PCO PFI ZETE', 'Parada pessoal', 'GD')
+          AND s.stop_type IN ('Erro de montagem', 'Erro de fornecedor', 'Retrabalho', 'Erro de especificação', 'Material trocado')
         GROUP BY ft.id
       )
       SELECT
         ft.model,
         COUNT(*)::int as total_first_tests,
         COUNT(CASE
-          WHEN ft.actual_duration_minutes <= ft.expected_duration_minutes
-           AND COALESCE(rs.relevant_stop_count, 0) = 0
+          WHEN COALESCE(fs.fail_stop_count, 0) = 0
           THEN 1
         END)::int as approved_no_stops,
         COUNT(CASE
-          WHEN ft.actual_duration_minutes <= ft.expected_duration_minutes
+          WHEN COALESCE(fs.fail_stop_count, 0) > 0
           THEN 1
-        END)::int as approved_time_only
+        END)::int as not_approved
       FROM first_tests ft
-      LEFT JOIN relevant_stops rs ON rs.test_id = ft.id
+      LEFT JOIN failing_stops fs ON fs.test_id = ft.id
       GROUP BY ft.model
       ORDER BY ft.model`
     )

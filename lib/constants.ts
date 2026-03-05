@@ -48,6 +48,7 @@ export const STOP_TYPES = [
   "Material sem identificação",
   "Sem saldo comprado",
   "Sem saldo fabricado",
+  "Falha não identificada",
   "Apoio DPCP",
   "Setup",
   "Vinculação",

@@ -151,14 +151,13 @@ export function DashboardView() {
       model: string
       total_first_tests: number
       approved_no_stops: number
-      approved_time_only: number
+      not_approved: number
     }) => ({
       ...item,
       approved_pct:
         item.total_first_tests > 0
           ? Math.round((item.approved_no_stops / item.total_first_tests) * 100)
           : 0,
-      not_approved: item.total_first_tests - item.approved_no_stops,
     })
   )
 
@@ -554,7 +553,7 @@ export function DashboardView() {
                   Obras Aprovadas no Primeiro Teste
                 </CardTitle>
                 <CardDescription>
-                  Obras que passaram no primeiro teste sem paradas relevantes (exclui Refeicao, Apoio Tecnico, PTE, Parada Pessoal, GD)
+                  Nao aprovadas = obras com Erro de montagem, Erro de fornecedor, Retrabalho, Erro de especificacao ou Material trocado
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2">
@@ -765,23 +764,23 @@ function KpiCard({
   description?: string
   icon: React.ReactNode
   variant?: "success" | "danger" | "warning"
-  }) {
+}) {
   return (
-  <Card>
-  <CardContent className="flex flex-col gap-1 py-4">
-  <div className="flex items-center gap-2 text-muted-foreground">
-  {icon}
-  <span className="text-xs font-medium">{title}</span>
-  </div>
-  <p
-  className={`text-2xl font-bold ${variant === "success"
-  ? "text-[#22a06b]"
-  : variant === "danger"
-  ? "text-destructive"
-  : variant === "warning"
-  ? "text-amber-600"
-  : "text-foreground"
-  }`}
+    <Card>
+      <CardContent className="flex flex-col gap-1 py-4">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          {icon}
+          <span className="text-xs font-medium">{title}</span>
+        </div>
+        <p
+          className={`text-2xl font-bold ${variant === "success"
+            ? "text-[#22a06b]"
+            : variant === "danger"
+              ? "text-destructive"
+              : variant === "warning"
+                ? "text-amber-600"
+                : "text-foreground"
+            }`}
         >
           {value}
         </p>
