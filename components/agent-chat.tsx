@@ -23,11 +23,16 @@ export function AgentChat() {
   const [input, setInput] = useState("")
   const scrollRef = useRef<HTMLDivElement>(null)
   
-  const { messages, sendMessage, status } = useChat({
+  const { messages, sendMessage, status, error } = useChat({
     transport: new DefaultChatTransport({ api: "/api/agent" }),
   })
 
   const isLoading = status === "streaming" || status === "submitted"
+
+  // Debug
+  console.log("[v0] Chat status:", status)
+  console.log("[v0] Messages:", messages)
+  console.log("[v0] Error:", error)
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -104,26 +109,31 @@ export function AgentChat() {
                     >
                       <CardContent className="p-3">
                         <div className="whitespace-pre-wrap text-sm">
-                          {message.parts.map((part, index) => {
-                            if (part.type === "text") {
-                              return <span key={index}>{part.text}</span>
-                            }
-                            if (part.type === "tool-invocation") {
-                              if (part.state === "output-available") {
-                                return null // Não mostra o output raw da tool
+                          {message.parts && message.parts.length > 0 ? (
+                            message.parts.map((part, index) => {
+                              if (part.type === "text") {
+                                return <span key={index}>{part.text}</span>
                               }
-                              return (
-                                <div
-                                  key={index}
-                                  className="my-2 flex items-center gap-2 rounded bg-muted/50 px-2 py-1 text-xs text-muted-foreground"
-                                >
-                                  <Loader2 className="h-3 w-3 animate-spin" />
-                                  Buscando dados...
-                                </div>
-                              )
-                            }
-                            return null
-                          })}
+                              if (part.type === "tool-invocation") {
+                                if (part.state === "output-available") {
+                                  return null // Não mostra o output raw da tool
+                                }
+                                return (
+                                  <div
+                                    key={index}
+                                    className="my-2 flex items-center gap-2 rounded bg-muted/50 px-2 py-1 text-xs text-muted-foreground"
+                                  >
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                    Buscando dados...
+                                  </div>
+                                )
+                              }
+                              return null
+                            })
+                          ) : (
+                            // Fallback para content legado se parts não existir
+                            <span>{(message as unknown as { content?: string }).content || ""}</span>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -144,6 +154,20 @@ export function AgentChat() {
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Loader2 className="h-4 w-4 animate-spin" />
                           Pensando...
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+                {error && (
+                  <div className="flex gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+                      <Bot className="h-4 w-4 text-destructive" />
+                    </div>
+                    <Card className="border-destructive/50 bg-destructive/10">
+                      <CardContent className="p-3">
+                        <div className="text-sm text-destructive">
+                          Erro: {error.message || "Falha ao obter resposta. Tente novamente."}
                         </div>
                       </CardContent>
                     </Card>

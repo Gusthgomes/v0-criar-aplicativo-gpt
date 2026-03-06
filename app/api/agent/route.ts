@@ -244,11 +244,14 @@ const tools = {
 }
 
 export async function POST(req: Request) {
-  const { messages } = await req.json()
+  try {
+    const { messages } = await req.json()
 
-  const result = streamText({
-    model: "openai/gpt-4o-mini",
-    system: `Você é um assistente especializado em análise de testes de obras industriais. 
+    console.log("[v0] Agent API called with messages:", JSON.stringify(messages, null, 2))
+
+    const result = streamText({
+      model: "openai/gpt-4o-mini",
+      system: `Você é um assistente especializado em análise de testes de obras industriais. 
 Você tem acesso a um banco de dados com informações sobre testes de obras, incluindo:
 - Testes realizados (obra, modelo, banca, colaborador, tempo esperado vs realizado)
 - Paradas durante os testes (tipo de parada, duração, observações)
@@ -260,10 +263,17 @@ Se não encontrar dados, informe educadamente ao usuário.
 Tipos de parada disponíveis: Erro de montagem, Erro de fornecedor, Retrabalho, Movimentação, Erro de especificação, Software, Desconexão, PTE PCO PFI ZETE, Falta de material, Material trocado, Material sem identificação, Sem saldo comprado, Sem saldo fabricado, Falha não identificada, Apoio DPCP, Setup, Vinculação, Parada pessoal, Refeição, Apoio técnico, GD.
 
 Modelos disponíveis: M25, M28, M29, M30, M31, M33, M34, M35, M73, M74, M75, M76, M77, OUTROS.`,
-    messages: await convertToModelMessages(messages),
-    tools,
-    stopWhen: stepCountIs(5),
-  })
+      messages: await convertToModelMessages(messages),
+      tools,
+      stopWhen: stepCountIs(5),
+    })
 
-  return result.toUIMessageStreamResponse()
+    return result.toUIMessageStreamResponse()
+  } catch (error) {
+    console.error("[v0] Agent API error:", error)
+    return new Response(
+      JSON.stringify({ error: "Erro ao processar a solicitação" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    )
+  }
 }
