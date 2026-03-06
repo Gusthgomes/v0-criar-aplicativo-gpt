@@ -1,38 +1,115 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { useChat } from "@ai-sdk/react"
-import { DefaultChatTransport } from "ai"
 import { AppHeader } from "@/components/app-header"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Send, Bot, User, Loader2, Sparkles } from "lucide-react"
+import { Send, Bot, User, Loader2, Sparkles, HelpCircle } from "lucide-react"
 
-const EXAMPLE_QUESTIONS = [
-  "Quais foram as paradas mais comuns esse mês?",
-  "Mostre os dados da obra 210224",
-  "Qual a taxa de aprovação do modelo M76?",
-  "Compare o desempenho dos modelos M76 e M77",
-  "Quais obras tiveram parada por retrabalho?",
-  "Quantos testes o colaborador 10284005 realizou?",
+interface Message {
+  id: string
+  role: "user" | "assistant"
+  content: string
+}
+
+const EXAMPLE_QUERIES = [
+  { text: "obra 208233", description: "Buscar dados de uma obra" },
+  { text: "modelo M76", description: "Estatisticas do modelo" },
+  { text: "hoje", description: "Testes de hoje" },
+  { text: "banca 3", description: "Testes da banca" },
+  { text: "parada retrabalho", description: "Obras com essa parada" },
+  { text: "ajuda", description: "Ver todos os comandos" },
 ]
 
-export function AgentChat() {
-  const [input, setInput] = useState("")
-  const scrollRef = useRef<HTMLDivElement>(null)
+// Função para renderizar markdown simples
+function renderMarkdown(text: string) {
+  const lines = text.split("\n")
   
-  const { messages, sendMessage, status, error } = useChat({
-    transport: new DefaultChatTransport({ api: "/api/agent" }),
+  return lines.map((line, index) => {
+    // Headers
+    if (line.startsWith("**") && line.endsWith("**") && !line.slice(2, -2).includes("**")) {
+      return (
+        <div key={index} className="font-semibold text-foreground mt-3 mb-1 first:mt-0">
+          {line.replace(/\*\*/g, "")}
+        </div>
+      )
+    }
+    
+    // Linha com negrito inline
+    if (line.includes("**")) {
+      const parts = line.split(/(\*\*[^*]+\*\*)/g)
+      return (
+        <div key={index} className="leading-relaxed">
+          {parts.map((part, i) => {
+            if (part.startsWith("**") && part.endsWith("**")) {
+              return <strong key={i} className="font-semibold">{part.slice(2, -2)}</strong>
+            }
+            // Código inline
+            if (part.includes("`")) {
+              const codeParts = part.split(/(`[^`]+`)/g)
+              return codeParts.map((cp, j) => {
+                if (cp.startsWith("`") && cp.endsWith("`")) {
+                  return (
+                    <code key={`${i}-${j}`} className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">
+                      {cp.slice(1, -1)}
+                    </code>
+                  )
+                }
+                return <span key={`${i}-${j}`}>{cp}</span>
+              })
+            }
+            return <span key={i}>{part}</span>
+          })}
+        </div>
+      )
+    }
+    
+    // Código inline
+    if (line.includes("`")) {
+      const parts = line.split(/(`[^`]+`)/g)
+      return (
+        <div key={index} className="leading-relaxed">
+          {parts.map((part, i) => {
+            if (part.startsWith("`") && part.endsWith("`")) {
+              return (
+                <code key={i} className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">
+                  {part.slice(1, -1)}
+                </code>
+              )
+            }
+            return <span key={i}>{part}</span>
+          })}
+        </div>
+      )
+    }
+    
+    // Separador
+    if (line === "---") {
+      return <hr key={index} className="my-3 border-border" />
+    }
+    
+    // Linha vazia
+    if (line.trim() === "") {
+      return <div key={index} className="h-2" />
+    }
+    
+    // Linha normal
+    return (
+      <div key={index} className="leading-relaxed">
+        {line}
+      </div>
+    )
   })
+}
 
-  const isLoading = status === "streaming" || status === "submitted"
-
-  // Debug
-  console.log("[v0] Chat status:", status)
-  console.log("[v0] Messages:", messages)
-  console.log("[v0] Error:", error)
+export function AgentChat() {
+  const [messages, setMessages] = useState<Message[]>([])
+  const [input, setInput] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -40,16 +117,55 @@ export function AgentChat() {
     }
   }, [messages])
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim() || isLoading) return
-    sendMessage({ text: input })
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || isLoading) return
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: "user",
+      content: text.trim(),
+    }
+
+    setMessages((prev) => [...prev, userMessage])
     setInput("")
+    setIsLoading(true)
+
+    try {
+      const response = await fetch("/api/agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text.trim() }),
+      })
+
+      const data = await response.json()
+
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: data.response || "Erro ao processar a solicitacao.",
+      }
+
+      setMessages((prev) => [...prev, assistantMessage])
+    } catch {
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: "Erro de conexao. Verifique sua internet e tente novamente.",
+      }
+      setMessages((prev) => [...prev, errorMessage])
+    } finally {
+      setIsLoading(false)
+      inputRef.current?.focus()
+    }
   }
 
-  const handleExampleClick = (question: string) => {
-    if (isLoading) return
-    sendMessage({ text: question })
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    sendMessage(input)
+  }
+
+  const handleExampleClick = (text: string) => {
+    sendMessage(text)
   }
 
   return (
@@ -65,24 +181,33 @@ export function AgentChat() {
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-foreground">
-                    Assistente de Testes
+                    Assistente de Consultas
                   </h2>
                   <p className="mt-2 text-muted-foreground">
-                    Pergunte qualquer coisa sobre as obras, testes e paradas
+                    Faca perguntas sobre obras, modelos, colaboradores, bancas ou paradas
                   </p>
                 </div>
               </div>
-              
-              <div className="grid w-full max-w-2xl gap-3 sm:grid-cols-2">
-                {EXAMPLE_QUESTIONS.map((question, index) => (
-                  <button
+
+              <div className="grid w-full max-w-lg gap-3 sm:grid-cols-2">
+                {EXAMPLE_QUERIES.map((example, index) => (
+                  <Button
                     key={index}
-                    onClick={() => handleExampleClick(question)}
-                    className="rounded-lg border border-border bg-card p-4 text-left text-sm text-foreground transition-colors hover:bg-muted"
+                    variant="outline"
+                    className="h-auto flex-col items-start gap-1 p-4 text-left"
+                    onClick={() => handleExampleClick(example.text)}
                   >
-                    {question}
-                  </button>
+                    <span className="font-medium">{example.text}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {example.description}
+                    </span>
+                  </Button>
                 ))}
+              </div>
+
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <HelpCircle className="h-3 w-3" />
+                Digite <code className="rounded bg-muted px-1.5 py-0.5 font-mono">ajuda</code> para ver todos os comandos
               </div>
             </div>
           ) : (
@@ -101,38 +226,20 @@ export function AgentChat() {
                       </div>
                     )}
                     <Card
-                      className={`max-w-[80%] ${
+                      className={`max-w-[85%] ${
                         message.role === "user"
                           ? "bg-primary text-primary-foreground"
                           : "bg-card"
                       }`}
                     >
                       <CardContent className="p-3">
-                        <div className="whitespace-pre-wrap text-sm">
-                          {message.parts && message.parts.length > 0 ? (
-                            message.parts.map((part, index) => {
-                              if (part.type === "text") {
-                                return <span key={index}>{part.text}</span>
-                              }
-                              if (part.type === "tool-invocation") {
-                                if (part.state === "output-available") {
-                                  return null // Não mostra o output raw da tool
-                                }
-                                return (
-                                  <div
-                                    key={index}
-                                    className="my-2 flex items-center gap-2 rounded bg-muted/50 px-2 py-1 text-xs text-muted-foreground"
-                                  >
-                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                    Buscando dados...
-                                  </div>
-                                )
-                              }
-                              return null
-                            })
+                        <div className="text-sm">
+                          {message.role === "user" ? (
+                            message.content
                           ) : (
-                            // Fallback para content legado se parts não existir
-                            <span>{(message as unknown as { content?: string }).content || ""}</span>
+                            <div className="space-y-0.5">
+                              {renderMarkdown(message.content)}
+                            </div>
                           )}
                         </div>
                       </CardContent>
@@ -144,7 +251,8 @@ export function AgentChat() {
                     )}
                   </div>
                 ))}
-                {isLoading && messages[messages.length - 1]?.role === "user" && (
+
+                {isLoading && (
                   <div className="flex gap-3">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
                       <Bot className="h-4 w-4 text-primary" />
@@ -153,21 +261,7 @@ export function AgentChat() {
                       <CardContent className="p-3">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Loader2 className="h-4 w-4 animate-spin" />
-                          Pensando...
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
-                {error && (
-                  <div className="flex gap-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-destructive/10">
-                      <Bot className="h-4 w-4 text-destructive" />
-                    </div>
-                    <Card className="border-destructive/50 bg-destructive/10">
-                      <CardContent className="p-3">
-                        <div className="text-sm text-destructive">
-                          Erro: {error.message || "Falha ao obter resposta. Tente novamente."}
+                          Buscando dados...
                         </div>
                       </CardContent>
                     </Card>
@@ -176,12 +270,13 @@ export function AgentChat() {
               </div>
             </ScrollArea>
           )}
-          
+
           <form onSubmit={handleSubmit} className="mt-4 flex gap-2">
             <Input
+              ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Pergunte sobre uma obra, modelo, colaborador..."
+              placeholder="Digite obra, modelo, colaborador, banca, parada ou data..."
               disabled={isLoading}
               className="flex-1"
             />
