@@ -30,27 +30,27 @@ export async function POST(
 
     const test = tests[0]
 
-    if (test.is_complete) {
+    // Teste completo (is_complete = true) não pode ser retomado
+    if (test.is_complete === true) {
       return NextResponse.json(
         { error: "Este teste ja foi finalizado como completo e nao pode ser retomado" },
         { status: 400 }
       )
     }
 
-    if (!test.finished_at) {
+    // Teste pausado deve ter: finished_at = NULL e is_complete = false
+    if (test.is_complete !== false) {
       return NextResponse.json(
-        { error: "Este teste ainda esta em andamento" },
+        { error: "Este teste nao esta pausado" },
         { status: 400 }
       )
     }
 
-    // Resume the test: clear finished_at but keep elapsed_seconds_at_pause
-    // The timer will use elapsed_seconds_at_pause to know where to resume from
+    // Retomar o teste: apenas marca que está sendo retomado
+    // O elapsed_seconds_at_pause será usado pelo timer para saber de onde continuar
     const result = await sql`
       UPDATE tests 
-      SET finished_at = NULL,
-          actual_duration_minutes = NULL,
-          created_at = NOW()
+      SET is_complete = NULL
       WHERE id = ${testId}
       RETURNING *
     `
