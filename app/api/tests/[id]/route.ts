@@ -84,12 +84,13 @@ export async function PATCH(
         return NextResponse.json(result[0])
       } else {
         // Pausing the test for the next day
+        // finished_at permanece NULL para indicar que o teste não acabou
         const elapsedSec = elapsed_seconds_at_pause ?? Math.ceil(actual_duration_minutes * 60)
 
         const result = await sql`
           UPDATE tests 
           SET actual_duration_minutes = ${actual_duration_minutes},
-              finished_at = NOW(),
+              finished_at = NULL,
               is_complete = false,
               elapsed_seconds_at_pause = ${elapsedSec},
               paused_at = NOW()

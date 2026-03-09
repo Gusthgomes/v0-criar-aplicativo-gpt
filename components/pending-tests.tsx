@@ -20,19 +20,24 @@ export function PendingTests() {
 
   async function handleResume(testId: number) {
     setResumingId(testId)
+    console.log("[v0] Resuming test:", testId)
     try {
       const res = await fetch(`/api/tests/${testId}/resume`, {
         method: "POST",
       })
+      console.log("[v0] Resume response status:", res.status)
+
+      const data = await res.json()
+      console.log("[v0] Resume response data:", data)
 
       if (!res.ok) {
-        const data = await res.json()
         throw new Error(data.error || "Erro ao retomar teste")
       }
 
+      console.log("[v0] Redirecting to /test/" + testId)
       router.push(`/test/${testId}`)
     } catch (err) {
-      console.error("Error resuming test:", err)
+      console.error("[v0] Error resuming test:", err)
       setResumingId(null)
     }
   }
