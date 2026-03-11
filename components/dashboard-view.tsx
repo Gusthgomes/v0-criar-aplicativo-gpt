@@ -625,206 +625,275 @@ function applyFilters() {
             </CardContent>
           </Card>
 
-          {/* Gráfico Pizza M76 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">
-                Tempo de Teste: M76
-              </CardTitle>
-              <CardDescription>
-                No tempo vs Excedeu para modelo M76
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {(() => {
-                const m76Data = testsByModel.find((t: { model: string }) => t.model === "M76")
-                if (!m76Data || (m76Data.on_time === 0 && m76Data.exceeded === 0)) {
-                  return (
-                    <p className="py-10 text-center text-sm text-muted-foreground">
-                      Sem dados para M76
-                    </p>
-                  )
-                }
-                const pieData = [
-                  { name: "No Tempo", value: m76Data.on_time, fill: CHART_GREEN },
-                  { name: "Excedeu", value: m76Data.exceeded, fill: CHART_RED },
-                ]
-                const total = m76Data.on_time + m76Data.exceeded
-                return (
-                  <ChartContainer
-                    config={{
-                      onTime: { label: "No Tempo", color: CHART_GREEN },
-                      exceeded: { label: "Excedeu", color: CHART_RED },
-                    }}
-                    className="h-[250px]"
-                  >
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={pieData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={50}
-                          outerRadius={80}
-                          paddingAngle={2}
-                          dataKey="value"
-                          label={({ name, value }) => `${name}: ${value} (${Math.round((value / total) * 100)}%)`}
-                        >
-                          {pieData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value: number) => [`${value} testes`, ""]} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
-                )
-              })()}
-            </CardContent>
-          </Card>
-
-          {/* Gráfico Pizza M73, M74, M75, M77 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">
-                Tempo de Teste: M73, M74, M75, M77
-              </CardTitle>
-              <CardDescription>
-                No tempo vs Excedeu para modelos M73, M74, M75 e M77
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {(() => {
-                const targetModels = ["M73", "M74", "M75", "M77"]
-                const filteredData = testsByModel.filter((t: { model: string }) => 
-                  targetModels.includes(t.model)
-                )
-                const totalOnTime = filteredData.reduce((sum: number, t: { on_time: number }) => sum + t.on_time, 0)
-                const totalExceeded = filteredData.reduce((sum: number, t: { exceeded: number }) => sum + t.exceeded, 0)
-                
-                if (totalOnTime === 0 && totalExceeded === 0) {
-                  return (
-                    <p className="py-10 text-center text-sm text-muted-foreground">
-                      Sem dados para M73, M74, M75, M77
-                    </p>
-                  )
-                }
-                const pieData = [
-                  { name: "No Tempo", value: totalOnTime, fill: CHART_GREEN },
-                  { name: "Excedeu", value: totalExceeded, fill: CHART_RED },
-                ]
-                const total = totalOnTime + totalExceeded
-                return (
-                  <ChartContainer
-                    config={{
-                      onTime: { label: "No Tempo", color: CHART_GREEN },
-                      exceeded: { label: "Excedeu", color: CHART_RED },
-                    }}
-                    className="h-[250px]"
-                  >
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={pieData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={50}
-                          outerRadius={80}
-                          paddingAngle={2}
-                          dataKey="value"
-                          label={({ name, value }) => `${name}: ${value} (${Math.round((value / total) * 100)}%)`}
-                        >
-                          {pieData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value: number) => [`${value} testes`, ""]} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
-                )
-              })()}
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Obras Aprovadas no Primeiro Teste */}
+        {/* Seção: Tempo de Teste M76 */}
         <Card>
           <CardHeader>
-            <div className="flex items-start justify-between">
-              <div>
-                <CardTitle className="text-base">
-                  Obras Aprovadas no Primeiro Teste
-                </CardTitle>
-                <CardDescription>
-                  Nao aprovadas = obras com Erro de montagem, Erro de fornecedor, Retrabalho, Erro de especificacao ou Material trocado
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2">
-                <ShieldCheck className="h-5 w-5 text-primary" />
-                <div className="text-right">
-                  <p className="text-lg font-bold text-primary">{approvedFirstPct}%</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {totalApprovedFirst}/{totalFirstTests} obras
-                  </p>
-                </div>
-              </div>
-            </div>
+            <CardTitle className="text-base">Tempo de Teste: M76</CardTitle>
+            <CardDescription>Distribuição de testes no tempo vs excedeu e principais motivos</CardDescription>
           </CardHeader>
           <CardContent>
-            {firstTestApproval.length === 0 ? (
-              <p className="py-10 text-center text-sm text-muted-foreground">
-                Sem dados disponiveis
-              </p>
-            ) : (
-              <ChartContainer
-                config={{
-                  approved_no_stops: { label: "Aprovadas", color: CHART_GREEN },
-                  not_approved: { label: "Nao Aprovadas", color: CHART_RED },
-                }}
-                className="h-[300px]"
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={firstTestApproval}
-                    margin={{ top: 5, right: 30, left: 5, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="model" tick={{ fontSize: 12 }} />
-                    <YAxis />
-                    <Tooltip
-                      formatter={(value: number, name: string) => [
-                        `${value} obras`,
-                        name === "approved_no_stops"
-                          ? "Aprovadas no 1o teste"
-                          : "Nao aprovadas",
-                      ]}
-                    />
-                    <Legend
-                      formatter={(value: string) =>
-                        value === "approved_no_stops"
-                          ? "Aprovadas no 1o teste"
-                          : "Nao aprovadas"
-                      }
-                    />
-                    <Bar
-                      dataKey="approved_no_stops"
-                      stackId="a"
-                      fill={CHART_GREEN}
-                      radius={[0, 0, 0, 0]}
-                      name="approved_no_stops"
-                    />
-                    <Bar
-                      dataKey="not_approved"
-                      stackId="a"
-                      fill={CHART_RED}
-                      radius={[4, 4, 0, 0]}
-                      name="not_approved"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            )}
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Pizza M76 */}
+              <div>
+                {(() => {
+                  const m76Data = testsByModel.find((t: { model: string }) => t.model === "M76")
+                  if (!m76Data || (m76Data.on_time === 0 && m76Data.exceeded === 0)) {
+                    return (
+                      <p className="py-10 text-center text-sm text-muted-foreground">
+                        Sem dados para M76
+                      </p>
+                    )
+                  }
+                  const pieData = [
+                    { name: "No Tempo", value: m76Data.on_time, fill: CHART_GREEN },
+                    { name: "Excedeu", value: m76Data.exceeded, fill: CHART_RED },
+                  ]
+                  const total = m76Data.on_time + m76Data.exceeded
+                  return (
+                    <ChartContainer
+                      config={{
+                        onTime: { label: "No Tempo", color: CHART_GREEN },
+                        exceeded: { label: "Excedeu", color: CHART_RED },
+                      }}
+                      className="h-[250px]"
+                    >
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={pieData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={50}
+                            outerRadius={80}
+                            paddingAngle={2}
+                            dataKey="value"
+                            label={({ name, value }) => `${name}: ${value} (${Math.round((value / total) * 100)}%)`}
+                          >
+                            {pieData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.fill} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(value: number) => [`${value} testes`, ""]} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </ChartContainer>
+                  )
+                })()}
+              </div>
+              {/* Pareto M76 - Motivos Excedeu */}
+              <div>
+                <p className="mb-2 text-sm font-medium text-muted-foreground">Pareto: Por que excedeu?</p>
+                {(!data?.exceeded_reasons_m76 || data.exceeded_reasons_m76.length === 0) ? (
+                  <p className="py-10 text-center text-sm text-muted-foreground">Sem dados</p>
+                ) : (
+                  <ChartContainer config={{ count: { label: "Ocorrencias", color: CHART_RED } }} className="h-[220px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={data.exceeded_reasons_m76} layout="vertical" margin={{ top: 5, right: 20, left: 5, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                        <XAxis type="number" />
+                        <YAxis dataKey="stop_type" type="category" width={120} tick={{ fontSize: 10 }} />
+                        <Tooltip formatter={(value: number) => [`${value} testes`, "Quantidade"]} />
+                        <Bar dataKey="count" fill={CHART_RED} radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Seção: Tempo de Teste M73, M74, M75, M77 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Tempo de Teste: M73, M74, M75, M77</CardTitle>
+            <CardDescription>Distribuição de testes no tempo vs excedeu e principais motivos</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Pizza Outros */}
+              <div>
+                {(() => {
+                  const targetModels = ["M73", "M74", "M75", "M77"]
+                  const filteredData = testsByModel.filter((t: { model: string }) => targetModels.includes(t.model))
+                  const totalOnTime = filteredData.reduce((sum: number, t: { on_time: number }) => sum + t.on_time, 0)
+                  const totalExceeded = filteredData.reduce((sum: number, t: { exceeded: number }) => sum + t.exceeded, 0)
+                  if (totalOnTime === 0 && totalExceeded === 0) {
+                    return <p className="py-10 text-center text-sm text-muted-foreground">Sem dados</p>
+                  }
+                  const pieData = [
+                    { name: "No Tempo", value: totalOnTime, fill: CHART_GREEN },
+                    { name: "Excedeu", value: totalExceeded, fill: CHART_RED },
+                  ]
+                  const total = totalOnTime + totalExceeded
+                  return (
+                    <ChartContainer
+                      config={{ onTime: { label: "No Tempo", color: CHART_GREEN }, exceeded: { label: "Excedeu", color: CHART_RED } }}
+                      className="h-[250px]"
+                    >
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value"
+                            label={({ name, value }) => `${name}: ${value} (${Math.round((value / total) * 100)}%)`}
+                          >
+                            {pieData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
+                          </Pie>
+                          <Tooltip formatter={(value: number) => [`${value} testes`, ""]} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </ChartContainer>
+                  )
+                })()}
+              </div>
+              {/* Pareto Outros - Motivos Excedeu */}
+              <div>
+                <p className="mb-2 text-sm font-medium text-muted-foreground">Pareto: Por que excedeu?</p>
+                {(!data?.exceeded_reasons_others || data.exceeded_reasons_others.length === 0) ? (
+                  <p className="py-10 text-center text-sm text-muted-foreground">Sem dados</p>
+                ) : (
+                  <ChartContainer config={{ count: { label: "Ocorrencias", color: CHART_RED } }} className="h-[220px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={data.exceeded_reasons_others} layout="vertical" margin={{ top: 5, right: 20, left: 5, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                        <XAxis type="number" />
+                        <YAxis dataKey="stop_type" type="category" width={120} tick={{ fontSize: 10 }} />
+                        <Tooltip formatter={(value: number) => [`${value} testes`, "Quantidade"]} />
+                        <Bar dataKey="count" fill={CHART_RED} radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Seção: Aprovação no Primeiro Teste - M76 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Aprovação no Primeiro Teste: M76</CardTitle>
+            <CardDescription>Aprovadas vs não aprovadas e motivos da não aprovação</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Pizza Aprovação M76 */}
+              <div>
+                {(() => {
+                  const m76Approval = firstTestApproval.find((t: { model: string }) => t.model === "M76")
+                  if (!m76Approval || (m76Approval.approved_no_stops === 0 && m76Approval.not_approved === 0)) {
+                    return <p className="py-10 text-center text-sm text-muted-foreground">Sem dados</p>
+                  }
+                  const pieData = [
+                    { name: "Aprovadas", value: m76Approval.approved_no_stops, fill: CHART_GREEN },
+                    { name: "Não Aprovadas", value: m76Approval.not_approved, fill: CHART_RED },
+                  ]
+                  const total = m76Approval.approved_no_stops + m76Approval.not_approved
+                  return (
+                    <ChartContainer
+                      config={{ approved: { label: "Aprovadas", color: CHART_GREEN }, notApproved: { label: "Não Aprovadas", color: CHART_RED } }}
+                      className="h-[250px]"
+                    >
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value"
+                            label={({ name, value }) => `${name}: ${value} (${Math.round((value / total) * 100)}%)`}
+                          >
+                            {pieData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
+                          </Pie>
+                          <Tooltip formatter={(value: number) => [`${value} obras`, ""]} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </ChartContainer>
+                  )
+                })()}
+              </div>
+              {/* Pareto Não Aprovação M76 */}
+              <div>
+                <p className="mb-2 text-sm font-medium text-muted-foreground">Pareto: Motivos da não aprovação</p>
+                {(!data?.not_approved_reasons_m76 || data.not_approved_reasons_m76.length === 0) ? (
+                  <p className="py-10 text-center text-sm text-muted-foreground">Sem dados</p>
+                ) : (
+                  <ChartContainer config={{ count: { label: "Ocorrencias", color: CHART_RED } }} className="h-[220px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={data.not_approved_reasons_m76} layout="vertical" margin={{ top: 5, right: 20, left: 5, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                        <XAxis type="number" />
+                        <YAxis dataKey="stop_type" type="category" width={120} tick={{ fontSize: 10 }} />
+                        <Tooltip formatter={(value: number) => [`${value} obras`, "Quantidade"]} />
+                        <Bar dataKey="count" fill={CHART_RED} radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Seção: Aprovação no Primeiro Teste - Outros Modelos */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Aprovação no Primeiro Teste: M73, M74, M75, M77</CardTitle>
+            <CardDescription>Aprovadas vs não aprovadas e motivos da não aprovação</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Pizza Aprovação Outros */}
+              <div>
+                {(() => {
+                  const targetModels = ["M73", "M74", "M75", "M77"]
+                  const filteredApproval = firstTestApproval.filter((t: { model: string }) => targetModels.includes(t.model))
+                  const totalApproved = filteredApproval.reduce((sum: number, t: { approved_no_stops: number }) => sum + t.approved_no_stops, 0)
+                  const totalNotApproved = filteredApproval.reduce((sum: number, t: { not_approved: number }) => sum + t.not_approved, 0)
+                  if (totalApproved === 0 && totalNotApproved === 0) {
+                    return <p className="py-10 text-center text-sm text-muted-foreground">Sem dados</p>
+                  }
+                  const pieData = [
+                    { name: "Aprovadas", value: totalApproved, fill: CHART_GREEN },
+                    { name: "Não Aprovadas", value: totalNotApproved, fill: CHART_RED },
+                  ]
+                  const total = totalApproved + totalNotApproved
+                  return (
+                    <ChartContainer
+                      config={{ approved: { label: "Aprovadas", color: CHART_GREEN }, notApproved: { label: "Não Aprovadas", color: CHART_RED } }}
+                      className="h-[250px]"
+                    >
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value"
+                            label={({ name, value }) => `${name}: ${value} (${Math.round((value / total) * 100)}%)`}
+                          >
+                            {pieData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
+                          </Pie>
+                          <Tooltip formatter={(value: number) => [`${value} obras`, ""]} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </ChartContainer>
+                  )
+                })()}
+              </div>
+              {/* Pareto Não Aprovação Outros */}
+              <div>
+                <p className="mb-2 text-sm font-medium text-muted-foreground">Pareto: Motivos da não aprovação</p>
+                {(!data?.not_approved_reasons_others || data.not_approved_reasons_others.length === 0) ? (
+                  <p className="py-10 text-center text-sm text-muted-foreground">Sem dados</p>
+                ) : (
+                  <ChartContainer config={{ count: { label: "Ocorrencias", color: CHART_RED } }} className="h-[220px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={data.not_approved_reasons_others} layout="vertical" margin={{ top: 5, right: 20, left: 5, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                        <XAxis type="number" />
+                        <YAxis dataKey="stop_type" type="category" width={120} tick={{ fontSize: 10 }} />
+                        <Tooltip formatter={(value: number) => [`${value} obras`, "Quantidade"]} />
+                        <Bar dataKey="count" fill={CHART_RED} radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
 

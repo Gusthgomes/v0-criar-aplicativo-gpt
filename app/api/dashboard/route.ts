@@ -175,6 +175,60 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    // Pareto: motivos de exceder tempo para M76
+    const exceededReasonsM76 = await sql(
+      `SELECT s.stop_type, COUNT(DISTINCT t.id)::int as count
+       FROM stops s
+       JOIN tests t ON t.id = s.test_id
+       ${finishedWhereClause} AND t.model = 'M76' AND t.actual_duration_minutes > t.expected_duration_minutes
+       GROUP BY s.stop_type
+       ORDER BY count DESC
+       LIMIT 10`
+    )
+
+    // Pareto: motivos de exceder tempo para M73, M74, M75, M77
+    const exceededReasonsOthers = await sql(
+      `SELECT s.stop_type, COUNT(DISTINCT t.id)::int as count
+       FROM stops s
+       JOIN tests t ON t.id = s.test_id
+       ${finishedWhereClause} AND t.model IN ('M73', 'M74', 'M75', 'M77') AND t.actual_duration_minutes > t.expected_duration_minutes
+       GROUP BY s.stop_type
+       ORDER BY count DESC
+       LIMIT 10`
+    )
+
+    // Pareto: motivos de não aprovação no primeiro teste para M76
+    const notApprovedReasonsM76 = await sql(
+      `WITH first_tests AS (
+        SELECT DISTINCT ON (t.work_number) t.id, t.work_number, t.model
+        FROM tests t
+        ${finishedWhereClause} AND t.model = 'M76'
+        ORDER BY t.work_number, t.created_at ASC
+      )
+      SELECT s.stop_type, COUNT(*)::int as count
+      FROM stops s
+      JOIN first_tests ft ON ft.id = s.test_id
+      WHERE s.stop_type IN ('Erro de montagem', 'Erro de fornecedor', 'Retrabalho', 'Erro de especificação', 'Material trocado')
+      GROUP BY s.stop_type
+      ORDER BY count DESC`
+    )
+
+    // Pareto: motivos de não aprovação no primeiro teste para outros modelos
+    const notApprovedReasonsOthers = await sql(
+      `WITH first_tests AS (
+        SELECT DISTINCT ON (t.work_number) t.id, t.work_number, t.model
+        FROM tests t
+        ${finishedWhereClause} AND t.model IN ('M73', 'M74', 'M75', 'M77')
+        ORDER BY t.work_number, t.created_at ASC
+      )
+      SELECT s.stop_type, COUNT(*)::int as count
+      FROM stops s
+      JOIN first_tests ft ON ft.id = s.test_id
+      WHERE s.stop_type IN ('Erro de montagem', 'Erro de fornecedor', 'Retrabalho', 'Erro de especificação', 'Material trocado')
+      GROUP BY s.stop_type
+      ORDER BY count DESC`
+    )
+
     return NextResponse.json({
       total_tests: totalTests[0]?.count || 0,
       finished_tests: finishedCount,
@@ -197,6 +251,10 @@ export async function GET(request: NextRequest) {
       expected_vs_actual: expectedVsActual,
       first_test_approval: firstTestApproval,
       recent_tests: recentTests,
+      exceeded_reasons_m76: exceededReasonsM76,
+      exceeded_reasons_others: exceededReasonsOthers,
+      not_approved_reasons_m76: notApprovedReasonsM76,
+      not_approved_reasons_others: notApprovedReasonsOthers,
     })
   } catch (error) {
     console.error("Error fetching dashboard data:", error)
