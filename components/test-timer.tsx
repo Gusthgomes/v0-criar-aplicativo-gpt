@@ -20,17 +20,22 @@ export function TestTimer({
 }: TestTimerProps) {
   const [remainingSeconds, setRemainingSeconds] = useState(durationMinutes * 60)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  
+  // Para testes retomados, usamos o momento que a página carregou como referência
+  // Para testes novos, usamos a data de criação (created_at)
+  const resumeTimeRef = useRef<number>(
+    initialElapsedSeconds > 0 ? Date.now() : new Date(startTime).getTime()
+  )
 
   const updateTimer = useCallback(() => {
-    const start = new Date(startTime).getTime()
     const now = Date.now()
-    const elapsedSinceResume = Math.floor((now - start) / 1000)
-    const totalElapsed = initialElapsedSeconds + elapsedSinceResume
+    const elapsedSincePageLoad = Math.floor((now - resumeTimeRef.current) / 1000)
+    const totalElapsed = initialElapsedSeconds + elapsedSincePageLoad
     const remaining = durationMinutes * 60 - totalElapsed
 
     setRemainingSeconds(remaining)
     onElapsedChange?.(totalElapsed)
-  }, [startTime, durationMinutes, initialElapsedSeconds, onElapsedChange])
+  }, [durationMinutes, initialElapsedSeconds, onElapsedChange])
 
   useEffect(() => {
     if (isFinished) return
