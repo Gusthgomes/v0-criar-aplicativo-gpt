@@ -11,11 +11,10 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
   Legend,
-  Cell,
   PieChart,
   Pie,
+  Cell,
 } from "recharts"
 import {
   Card,
@@ -537,7 +536,6 @@ function applyFilters() {
                   }}
                   className="h-[300px]"
                 >
-                  <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={stopsByType}
                       layout="vertical"
@@ -570,7 +568,6 @@ function applyFilters() {
                         ))}
                       </Bar>
                     </BarChart>
-                  </ResponsiveContainer>
                 </ChartContainer>
               )}
             </CardContent>
@@ -595,7 +592,6 @@ function applyFilters() {
                   }}
                   className="h-[300px]"
                 >
-                  <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={testsByModel}
                       margin={{ top: 5, right: 20, left: 5, bottom: 5 }}
@@ -619,12 +615,10 @@ function applyFilters() {
                         name="Excedeu"
                       />
                     </BarChart>
-                  </ResponsiveContainer>
                 </ChartContainer>
               )}
             </CardContent>
           </Card>
-
         </div>
 
         {/* Seção: Tempo de Teste M76 */}
@@ -659,7 +653,6 @@ function applyFilters() {
                       }}
                       className="h-[250px]"
                     >
-                      <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
                             data={pieData}
@@ -677,7 +670,6 @@ function applyFilters() {
                           </Pie>
                           <Tooltip formatter={(value: number) => [`${value} testes`, ""]} />
                         </PieChart>
-                      </ResponsiveContainer>
                     </ChartContainer>
                   )
                 })()}
@@ -689,7 +681,6 @@ function applyFilters() {
                   <p className="py-10 text-center text-sm text-muted-foreground">Sem dados</p>
                 ) : (
                   <ChartContainer config={{ count: { label: "Ocorrencias", color: CHART_RED } }} className="h-[220px]">
-                    <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={data.exceeded_reasons_m76} layout="vertical" margin={{ top: 5, right: 20, left: 5, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                         <XAxis type="number" />
@@ -697,7 +688,6 @@ function applyFilters() {
                         <Tooltip formatter={(value: number) => [`${value} testes`, "Quantidade"]} />
                         <Bar dataKey="count" fill={CHART_RED} radius={[0, 4, 4, 0]} />
                       </BarChart>
-                    </ResponsiveContainer>
                   </ChartContainer>
                 )}
               </div>
@@ -733,7 +723,6 @@ function applyFilters() {
                       config={{ onTime: { label: "No Tempo", color: CHART_GREEN }, exceeded: { label: "Excedeu", color: CHART_RED } }}
                       className="h-[250px]"
                     >
-                      <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value"
                             label={({ name, value }) => `${name}: ${value} (${Math.round((value / total) * 100)}%)`}
@@ -742,7 +731,6 @@ function applyFilters() {
                           </Pie>
                           <Tooltip formatter={(value: number) => [`${value} testes`, ""]} />
                         </PieChart>
-                      </ResponsiveContainer>
                     </ChartContainer>
                   )
                 })()}
@@ -754,7 +742,6 @@ function applyFilters() {
                   <p className="py-10 text-center text-sm text-muted-foreground">Sem dados</p>
                 ) : (
                   <ChartContainer config={{ count: { label: "Ocorrencias", color: CHART_RED } }} className="h-[220px]">
-                    <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={data.exceeded_reasons_others} layout="vertical" margin={{ top: 5, right: 20, left: 5, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                         <XAxis type="number" />
@@ -762,7 +749,6 @@ function applyFilters() {
                         <Tooltip formatter={(value: number) => [`${value} testes`, "Quantidade"]} />
                         <Bar dataKey="count" fill={CHART_RED} radius={[0, 4, 4, 0]} />
                       </BarChart>
-                    </ResponsiveContainer>
                   </ChartContainer>
                 )}
               </div>
@@ -795,7 +781,6 @@ function applyFilters() {
                       config={{ approved: { label: "Aprovadas", color: CHART_GREEN }, notApproved: { label: "Não Aprovadas", color: CHART_RED } }}
                       className="h-[250px]"
                     >
-                      <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value"
                             label={({ name, value }) => `${name}: ${value} (${Math.round((value / total) * 100)}%)`}
@@ -804,7 +789,6 @@ function applyFilters() {
                           </Pie>
                           <Tooltip formatter={(value: number) => [`${value} obras`, ""]} />
                         </PieChart>
-                      </ResponsiveContainer>
                     </ChartContainer>
                   )
                 })()}
@@ -816,7 +800,6 @@ function applyFilters() {
                   <p className="py-10 text-center text-sm text-muted-foreground">Sem dados</p>
                 ) : (
                   <ChartContainer config={{ count: { label: "Ocorrencias", color: CHART_RED } }} className="h-[220px]">
-                    <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={data.not_approved_reasons_m76} layout="vertical" margin={{ top: 5, right: 20, left: 5, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                         <XAxis type="number" />
@@ -824,7 +807,6 @@ function applyFilters() {
                         <Tooltip formatter={(value: number) => [`${value} obras`, "Quantidade"]} />
                         <Bar dataKey="count" fill={CHART_RED} radius={[0, 4, 4, 0]} />
                       </BarChart>
-                    </ResponsiveContainer>
                   </ChartContainer>
                 )}
               </div>
@@ -860,7 +842,6 @@ function applyFilters() {
                       config={{ approved: { label: "Aprovadas", color: CHART_GREEN }, notApproved: { label: "Não Aprovadas", color: CHART_RED } }}
                       className="h-[250px]"
                     >
-                      <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value"
                             label={({ name, value }) => `${name}: ${value} (${Math.round((value / total) * 100)}%)`}
@@ -869,7 +850,6 @@ function applyFilters() {
                           </Pie>
                           <Tooltip formatter={(value: number) => [`${value} obras`, ""]} />
                         </PieChart>
-                      </ResponsiveContainer>
                     </ChartContainer>
                   )
                 })()}
@@ -881,7 +861,6 @@ function applyFilters() {
                   <p className="py-10 text-center text-sm text-muted-foreground">Sem dados</p>
                 ) : (
                   <ChartContainer config={{ count: { label: "Ocorrencias", color: CHART_RED } }} className="h-[220px]">
-                    <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={data.not_approved_reasons_others} layout="vertical" margin={{ top: 5, right: 20, left: 5, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                         <XAxis type="number" />
@@ -889,7 +868,6 @@ function applyFilters() {
                         <Tooltip formatter={(value: number) => [`${value} obras`, "Quantidade"]} />
                         <Bar dataKey="count" fill={CHART_RED} radius={[0, 4, 4, 0]} />
                       </BarChart>
-                    </ResponsiveContainer>
                   </ChartContainer>
                 )}
               </div>
