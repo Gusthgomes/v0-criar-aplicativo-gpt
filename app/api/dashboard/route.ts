@@ -175,12 +175,18 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    // Build conditions string without WHERE prefix for use in JOINs
+    const baseConditions = conditions.length > 0 ? conditions.join(" AND ") : "1=1"
+
     // Pareto: motivos de exceder tempo para M76
     const exceededReasonsM76 = await sql(
       `SELECT s.stop_type, COUNT(DISTINCT t.id)::int as count
        FROM stops s
        JOIN tests t ON t.id = s.test_id
-       ${finishedWhereClause} AND t.model = 'M76' AND t.actual_duration_minutes > t.expected_duration_minutes
+       WHERE t.finished_at IS NOT NULL 
+         AND t.model = 'M76' 
+         AND t.actual_duration_minutes > t.expected_duration_minutes
+         AND ${baseConditions}
        GROUP BY s.stop_type
        ORDER BY count DESC
        LIMIT 10`
@@ -191,7 +197,10 @@ export async function GET(request: NextRequest) {
       `SELECT s.stop_type, COUNT(DISTINCT t.id)::int as count
        FROM stops s
        JOIN tests t ON t.id = s.test_id
-       ${finishedWhereClause} AND t.model IN ('M73', 'M74', 'M75', 'M77') AND t.actual_duration_minutes > t.expected_duration_minutes
+       WHERE t.finished_at IS NOT NULL 
+         AND t.model IN ('M73', 'M74', 'M75', 'M77') 
+         AND t.actual_duration_minutes > t.expected_duration_minutes
+         AND ${baseConditions}
        GROUP BY s.stop_type
        ORDER BY count DESC
        LIMIT 10`
@@ -202,7 +211,7 @@ export async function GET(request: NextRequest) {
       `WITH first_tests AS (
         SELECT DISTINCT ON (t.work_number) t.id, t.work_number, t.model
         FROM tests t
-        ${finishedWhereClause} AND t.model = 'M76'
+        WHERE t.finished_at IS NOT NULL AND t.model = 'M76' AND ${baseConditions}
         ORDER BY t.work_number, t.created_at ASC
       )
       SELECT s.stop_type, COUNT(*)::int as count
@@ -218,7 +227,7 @@ export async function GET(request: NextRequest) {
       `WITH first_tests AS (
         SELECT DISTINCT ON (t.work_number) t.id, t.work_number, t.model
         FROM tests t
-        ${finishedWhereClause} AND t.model IN ('M73', 'M74', 'M75', 'M77')
+        WHERE t.finished_at IS NOT NULL AND t.model IN ('M73', 'M74', 'M75', 'M77') AND ${baseConditions}
         ORDER BY t.work_number, t.created_at ASC
       )
       SELECT s.stop_type, COUNT(*)::int as count
