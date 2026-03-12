@@ -19,11 +19,12 @@ export async function GET(request: NextRequest) {
     const stopConditions: string[] = []
 
     if (dateFrom) {
-      conditions.push(`t.created_at >= '${dateFrom}T00:00:00.000Z'`)
+      // Usa finished_at para filtrar por data de finalização (não criação)
+      conditions.push(`t.finished_at >= '${dateFrom}T00:00:00.000Z'`)
       stopConditions.push(`s.created_at >= '${dateFrom}T00:00:00.000Z'`)
     }
     if (dateTo) {
-      conditions.push(`t.created_at <= '${dateTo}T23:59:59.999Z'`)
+      conditions.push(`t.finished_at <= '${dateTo}T23:59:59.999Z'`)
       stopConditions.push(`s.created_at <= '${dateTo}T23:59:59.999Z'`)
     }
     if (bench) {
