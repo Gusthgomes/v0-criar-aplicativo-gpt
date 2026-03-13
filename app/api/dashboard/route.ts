@@ -18,13 +18,29 @@ export async function GET(request: NextRequest) {
     const conditions: string[] = []
     const stopConditions: string[] = []
 
-    if (dateFrom) {
-      // Usa finished_at para filtrar por data de finalização (não criação)
-      conditions.push(`t.finished_at >= '${dateFrom}T00:00:00.000Z'`)
+    if (dateFrom && dateTo) {
+      // Para obras finalizadas: filtra por finished_at
+      // Para obras em andamento: filtra por created_at
+      conditions.push(`(
+        (t.finished_at IS NOT NULL AND t.finished_at >= '${dateFrom}T00:00:00.000Z' AND t.finished_at <= '${dateTo}T23:59:59.999Z')
+        OR 
+        (t.finished_at IS NULL AND t.created_at >= '${dateFrom}T00:00:00.000Z' AND t.created_at <= '${dateTo}T23:59:59.999Z')
+      )`)
       stopConditions.push(`s.created_at >= '${dateFrom}T00:00:00.000Z'`)
-    }
-    if (dateTo) {
-      conditions.push(`t.finished_at <= '${dateTo}T23:59:59.999Z'`)
+      stopConditions.push(`s.created_at <= '${dateTo}T23:59:59.999Z'`)
+    } else if (dateFrom) {
+      conditions.push(`(
+        (t.finished_at IS NOT NULL AND t.finished_at >= '${dateFrom}T00:00:00.000Z')
+        OR 
+        (t.finished_at IS NULL AND t.created_at >= '${dateFrom}T00:00:00.000Z')
+      )`)
+      stopConditions.push(`s.created_at >= '${dateFrom}T00:00:00.000Z'`)
+    } else if (dateTo) {
+      conditions.push(`(
+        (t.finished_at IS NOT NULL AND t.finished_at <= '${dateTo}T23:59:59.999Z')
+        OR 
+        (t.finished_at IS NULL AND t.created_at <= '${dateTo}T23:59:59.999Z')
+      )`)
       stopConditions.push(`s.created_at <= '${dateTo}T23:59:59.999Z'`)
     }
     if (bench) {
