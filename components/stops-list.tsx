@@ -4,6 +4,7 @@ import { AlertTriangle, Clock } from "lucide-react"
 interface Stop {
   id: number
   stop_type: string
+  sub_type: string | null
   observations: string | null
   duration_minutes: number | null
   created_at: string
@@ -63,6 +64,11 @@ export function StopsList({ stops }: StopsListProps) {
                 </Badge>
                 <span className="text-sm font-medium text-foreground">
                   {stop.stop_type}
+                  {stop.sub_type && (
+                    <span className="ml-1 font-normal text-muted-foreground">
+                      &gt; {stop.sub_type}
+                    </span>
+                  )}
                 </span>
               </div>
               <div className="flex items-center gap-3">

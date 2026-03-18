@@ -37,7 +37,7 @@ export const MODEL_DURATION_MINUTES: Record<Model, number> = {
 export const STOP_TYPES = [
   "Erro de montagem",
   "Erro de fornecedor",
-  "Retrabalho",
+  "Erro de separação",
   "Movimentação",
   "Erro de especificação",
   "Software",
@@ -55,10 +55,56 @@ export const STOP_TYPES = [
   "Parada pessoal",
   "Refeição",
   "Apoio técnico",
+  "Manutenção de bancada",
+  "Manutenção simulador",
   "GD"
 ] as const
 
 export type StopType = (typeof STOP_TYPES)[number]
+
+// Subgrupos para cada tipo de parada que possui detalhamento
+export const STOP_SUBTYPES: Record<string, readonly string[]> = {
+  "Erro de montagem": [
+    "Bot",
+    "Ind",
+    "Bot.Ind Acoplado",
+    "Lid",
+    "COP",
+    "QC",
+    "CTB",
+    "PIT",
+    "DPB",
+    "DPB-C",
+    "P4S",
+  ],
+  "Erro de fornecedor": [
+    "Fiação com defeito",
+    "Módulo com defeito",
+    "Falta de identificação",
+    "Linha solta",
+    "Linha invertida",
+    "Conector quebrado",
+  ],
+  "Erro de especificação": [
+    "Erro lógica elétrica",
+    "Desenho errado",
+    "RTC incorreta",
+    "ECM/Desvio",
+  ],
+  "Software": [
+    "JobFile faltante",
+    "JobFile incorreto",
+    "Versão de firmware errada",
+    "Atualização de software",
+  ],
+  "Erro de separação": [
+    "Item trocado",
+    "Item não enviado/localizado",
+  ],
+} as const
+
+// Lista de paradas que possuem subgrupos
+export const STOPS_WITH_SUBTYPES = Object.keys(STOP_SUBTYPES)
 
 export const BENCHES = [1, 2, 3, 4, 5, 6, 7, 8] as const
 

@@ -19,7 +19,7 @@ export async function POST(
     }
 
     const body = await request.json()
-    const { stop_type, observations, duration_minutes } = body
+    const { stop_type, sub_type, observations, duration_minutes } = body
 
     if (!stop_type) {
       return NextResponse.json(
@@ -46,8 +46,8 @@ export async function POST(
     }
 
     const result = await sql`
-      INSERT INTO stops (test_id, stop_type, observations, duration_minutes)
-      VALUES (${testId}, ${stop_type}, ${observations || null}, ${duration_minutes ?? null})
+      INSERT INTO stops (test_id, stop_type, sub_type, observations, duration_minutes)
+      VALUES (${testId}, ${stop_type}, ${sub_type || null}, ${observations || null}, ${duration_minutes ?? null})
       RETURNING *
     `
 

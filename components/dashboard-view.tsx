@@ -48,6 +48,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { ParetoDrilldown } from "@/components/pareto-drilldown"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { AppHeader } from "@/components/app-header"
 import { formatDuration, MODELS, BENCHES } from "@/lib/constants"
@@ -126,6 +127,14 @@ function buildURLQueryString(filters: FilterState): string {
   return qs ? `?${qs}` : ""
 }
 
+function buildSubtypeFilterParams(filters: FilterState): string {
+  const params = new URLSearchParams()
+  if (filters.dateFrom) params.set("date_from", filters.dateFrom)
+  if (filters.dateTo) params.set("date_to", filters.dateTo)
+  if (filters.bench) params.set("bench", filters.bench)
+  return params.toString()
+}
+
 export function DashboardView() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -162,6 +171,9 @@ export function DashboardView() {
 
   const url = useMemo(() => buildQueryString(appliedFilters), [appliedFilters])
   const { data, error, isLoading } = useSWR(url, fetcher)
+  
+  // Parâmetros de filtro para drill-down dos Paretos
+  const subtypeFilterParams = useMemo(() => buildSubtypeFilterParams(appliedFilters), [appliedFilters])
 
   const hasActiveFilters = appliedFilters.dateFrom !== "" || 
     appliedFilters.dateTo !== "" || 
@@ -676,20 +688,11 @@ function applyFilters() {
               </div>
               {/* Pareto M76 - Motivos Excedeu */}
               <div>
-                <p className="mb-2 text-sm font-medium text-muted-foreground">Pareto: Por que excedeu?</p>
-                {(!data?.exceeded_reasons_m76 || data.exceeded_reasons_m76.length === 0) ? (
-                  <p className="py-10 text-center text-sm text-muted-foreground">Sem dados</p>
-                ) : (
-                  <ChartContainer config={{ count: { label: "Ocorrencias", color: CHART_RED } }} className="h-[220px]">
-                      <BarChart data={data.exceeded_reasons_m76} layout="vertical" margin={{ top: 5, right: 20, left: 5, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                        <XAxis type="number" />
-                        <YAxis dataKey="stop_type" type="category" width={120} tick={{ fontSize: 10 }} />
-                        <Tooltip formatter={(value: number) => [`${value} testes`, "Quantidade"]} />
-                        <Bar dataKey="count" fill={CHART_RED} radius={[0, 4, 4, 0]} />
-                      </BarChart>
-                  </ChartContainer>
-                )}
+                <ParetoDrilldown
+                  data={data?.exceeded_reasons_m76 || []}
+                  title="Pareto: Por que excedeu?"
+                  filterParams={`${subtypeFilterParams}&model=M76`}
+                />
               </div>
             </div>
           </CardContent>
@@ -737,20 +740,11 @@ function applyFilters() {
               </div>
               {/* Pareto Outros - Motivos Excedeu */}
               <div>
-                <p className="mb-2 text-sm font-medium text-muted-foreground">Pareto: Por que excedeu?</p>
-                {(!data?.exceeded_reasons_others || data.exceeded_reasons_others.length === 0) ? (
-                  <p className="py-10 text-center text-sm text-muted-foreground">Sem dados</p>
-                ) : (
-                  <ChartContainer config={{ count: { label: "Ocorrencias", color: CHART_RED } }} className="h-[220px]">
-                      <BarChart data={data.exceeded_reasons_others} layout="vertical" margin={{ top: 5, right: 20, left: 5, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                        <XAxis type="number" />
-                        <YAxis dataKey="stop_type" type="category" width={120} tick={{ fontSize: 10 }} />
-                        <Tooltip formatter={(value: number) => [`${value} testes`, "Quantidade"]} />
-                        <Bar dataKey="count" fill={CHART_RED} radius={[0, 4, 4, 0]} />
-                      </BarChart>
-                  </ChartContainer>
-                )}
+                <ParetoDrilldown
+                  data={data?.exceeded_reasons_others || []}
+                  title="Pareto: Por que excedeu?"
+                  filterParams={subtypeFilterParams}
+                />
               </div>
             </div>
           </CardContent>
@@ -795,20 +789,11 @@ function applyFilters() {
               </div>
               {/* Pareto Não Aprovação M76 */}
               <div>
-                <p className="mb-2 text-sm font-medium text-muted-foreground">Pareto: Motivos da não aprovação</p>
-                {(!data?.not_approved_reasons_m76 || data.not_approved_reasons_m76.length === 0) ? (
-                  <p className="py-10 text-center text-sm text-muted-foreground">Sem dados</p>
-                ) : (
-                  <ChartContainer config={{ count: { label: "Ocorrencias", color: CHART_RED } }} className="h-[220px]">
-                      <BarChart data={data.not_approved_reasons_m76} layout="vertical" margin={{ top: 5, right: 20, left: 5, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                        <XAxis type="number" />
-                        <YAxis dataKey="stop_type" type="category" width={120} tick={{ fontSize: 10 }} />
-                        <Tooltip formatter={(value: number) => [`${value} obras`, "Quantidade"]} />
-                        <Bar dataKey="count" fill={CHART_RED} radius={[0, 4, 4, 0]} />
-                      </BarChart>
-                  </ChartContainer>
-                )}
+                <ParetoDrilldown
+                  data={data?.not_approved_reasons_m76 || []}
+                  title="Pareto: Motivos da não aprovação"
+                  filterParams={`${subtypeFilterParams}&model=M76`}
+                />
               </div>
             </div>
           </CardContent>
@@ -856,20 +841,11 @@ function applyFilters() {
               </div>
               {/* Pareto Não Aprovação Outros */}
               <div>
-                <p className="mb-2 text-sm font-medium text-muted-foreground">Pareto: Motivos da não aprovação</p>
-                {(!data?.not_approved_reasons_others || data.not_approved_reasons_others.length === 0) ? (
-                  <p className="py-10 text-center text-sm text-muted-foreground">Sem dados</p>
-                ) : (
-                  <ChartContainer config={{ count: { label: "Ocorrencias", color: CHART_RED } }} className="h-[220px]">
-                      <BarChart data={data.not_approved_reasons_others} layout="vertical" margin={{ top: 5, right: 20, left: 5, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                        <XAxis type="number" />
-                        <YAxis dataKey="stop_type" type="category" width={120} tick={{ fontSize: 10 }} />
-                        <Tooltip formatter={(value: number) => [`${value} obras`, "Quantidade"]} />
-                        <Bar dataKey="count" fill={CHART_RED} radius={[0, 4, 4, 0]} />
-                      </BarChart>
-                  </ChartContainer>
-                )}
+                <ParetoDrilldown
+                  data={data?.not_approved_reasons_others || []}
+                  title="Pareto: Motivos da não aprovação"
+                  filterParams={subtypeFilterParams}
+                />
               </div>
             </div>
           </CardContent>

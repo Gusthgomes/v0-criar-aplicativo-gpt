@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
-import { STOP_TYPES } from "@/lib/constants"
+import { STOP_TYPES, STOP_SUBTYPES } from "@/lib/constants"
 import { useOfflineQueue } from "@/hooks/use-offline-queue"
 import { Plus, Loader2, Play, Square, X, Clock, WifiOff } from "lucide-react"
 import { toast } from "sonner"
@@ -36,9 +36,14 @@ export function StopForm({ testId, onStopAdded, isOnline = true }: StopFormProps
 
   // classificacao
   const [stopType, setStopType] = useState("")
+  const [subType, setSubType] = useState("")
   const [observations, setObservations] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Verifica se o tipo selecionado tem subtipos
+  const hasSubtypes = stopType && stopType in STOP_SUBTYPES
+  const availableSubtypes = hasSubtypes ? STOP_SUBTYPES[stopType] : []
 
   const { resilientFetch } = useOfflineQueue()
 
@@ -100,6 +105,11 @@ export function StopForm({ testId, onStopAdded, isOnline = true }: StopFormProps
       return
     }
 
+    if (hasSubtypes && !subType) {
+      setError("Selecione o subtipo da parada")
+      return
+    }
+
     const durationMinutes = Math.max(1, Math.ceil(finalSeconds / 60))
 
     setIsSubmitting(true)
@@ -110,10 +120,11 @@ export function StopForm({ testId, onStopAdded, isOnline = true }: StopFormProps
           method: "POST",
           body: {
             stop_type: stopType,
+            sub_type: subType || null,
             observations: observations.trim() || null,
             duration_minutes: durationMinutes,
           },
-          description: `Parada: ${stopType} (${durationMinutes}min)`,
+          description: `Parada: ${stopType}${subType ? ` > ${subType}` : ""} (${durationMinutes}min)`,
         },
         () => onStopAdded()
       )
@@ -132,6 +143,7 @@ export function StopForm({ testId, onStopAdded, isOnline = true }: StopFormProps
       // Limpa tudo e volta ao idle
       setPhase("idle")
       setStopType("")
+      setSubType("")
       setObservations("")
       setFinalSeconds(0)
       setElapsedSeconds(0)
@@ -252,7 +264,13 @@ export function StopForm({ testId, onStopAdded, isOnline = true }: StopFormProps
             <Label className="text-sm font-medium text-foreground">
               Tipo de Parada
             </Label>
-            <Select value={stopType} onValueChange={setStopType}>
+            <Select 
+              value={stopType} 
+              onValueChange={(value) => {
+                setStopType(value)
+                setSubType("") // Limpa subtipo ao mudar tipo
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o motivo da parada" />
               </SelectTrigger>
@@ -265,6 +283,26 @@ export function StopForm({ testId, onStopAdded, isOnline = true }: StopFormProps
               </SelectContent>
             </Select>
           </div>
+
+          {hasSubtypes && (
+            <div className="flex flex-col gap-2">
+              <Label className="text-sm font-medium text-foreground">
+                Detalhamento
+              </Label>
+              <Select value={subType} onValueChange={setSubType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o detalhamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableSubtypes.map((sub) => (
+                    <SelectItem key={sub} value={sub}>
+                      {sub}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="flex flex-col gap-2">
             <Label className="text-sm font-medium text-foreground">
