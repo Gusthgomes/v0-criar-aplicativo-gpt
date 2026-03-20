@@ -488,7 +488,7 @@ function applyFilters() {
         )}
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-7">
           <KpiCard
             title="Testes Encerrados"
             value={String(data?.finished_tests || 0)}
@@ -525,6 +525,13 @@ function applyFilters() {
             title="Paradas/Teste"
             value={String(data?.avg_stops_per_test || 0)}
             icon={<AlertTriangle className="h-4 w-4" />}
+          />
+          <KpiCard
+            title="Aprov. 1o Teste"
+            value={`${approvedFirstPct}%`}
+            description={`${totalApprovedFirst}/${totalFirstTests} obras`}
+            icon={<ShieldCheck className="h-4 w-4" />}
+            variant="success"
           />
         </div>
 
