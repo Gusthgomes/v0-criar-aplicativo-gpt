@@ -21,7 +21,7 @@ import { TestTimer } from "@/components/test-timer"
 import { StopForm } from "@/components/stop-form"
 import { StopsList } from "@/components/stops-list"
 import { ConnectionBanner } from "@/components/connection-banner"
-import { formatDuration } from "@/lib/constants"
+import { formatDuration, STOPS_NOT_COUNTED_IN_TIME } from "@/lib/constants"
 import { AppHeader } from "@/components/app-header"
 import { useOfflineQueue, useTimerAutoSave } from "@/hooks/use-offline-queue"
 import { Square, Loader2, User, Wrench, Hash, Timer, Moon } from "lucide-react"
@@ -75,7 +75,18 @@ export function TestSession({ testId }: TestSessionProps) {
   async function handleFinish() {
     setIsFinishing(true)
     try {
-      const actualMinutes = Math.ceil(elapsedSeconds / 60)
+      // Calcular tempo das paradas que não contam (ex: Refeição)
+      const stopsNotCounted = test?.stops?.filter(
+        (s: { stop_type: string }) => STOPS_NOT_COUNTED_IN_TIME.includes(s.stop_type as typeof STOPS_NOT_COUNTED_IN_TIME[number])
+      ) || []
+      const minutesNotCounted = stopsNotCounted.reduce(
+        (sum: number, s: { duration_minutes: number | null }) => sum + (s.duration_minutes || 0),
+        0
+      )
+      
+      // Tempo total menos tempo de paradas que não contam
+      const totalMinutes = Math.ceil(elapsedSeconds / 60)
+      const actualMinutes = Math.max(0, totalMinutes - minutesNotCounted)
       const complete = isComplete === "yes"
 
       const result = await resilientFetch(
