@@ -125,3 +125,7 @@ export function formatTimer(totalSeconds: number): string {
   const time = `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
   return isNegative ? `-${time}` : time
 }
+
+// Paradas que NÃO contam no tempo total de teste
+// O tempo dessas paradas será subtraído do tempo total ao finalizar
+export const STOPS_NOT_COUNTED_IN_TIME = ["Refeição"] as const
