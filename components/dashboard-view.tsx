@@ -138,18 +138,18 @@ function buildSubtypeFilterParams(filters: FilterState): string {
 export function DashboardView() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  
+
   // Inicializa os filtros a partir da URL
   const initialFilters = useMemo(() => parseFiltersFromURL(searchParams), [searchParams])
-  
+
   const [filters, setFilters] = useState<FilterState>(initialFilters)
   const [appliedFilters, setAppliedFilters] = useState<FilterState>(initialFilters)
   const [showFilters, setShowFilters] = useState(
-    initialFilters.dateFrom !== "" || 
-    initialFilters.dateTo !== "" || 
-    initialFilters.bench !== "" || 
-    initialFilters.models.length > 0 || 
-    initialFilters.employeeId !== "" || 
+    initialFilters.dateFrom !== "" ||
+    initialFilters.dateTo !== "" ||
+    initialFilters.bench !== "" ||
+    initialFilters.models.length > 0 ||
+    initialFilters.employeeId !== "" ||
     initialFilters.status !== ""
   )
 
@@ -171,24 +171,24 @@ export function DashboardView() {
 
   const url = useMemo(() => buildQueryString(appliedFilters), [appliedFilters])
   const { data, error, isLoading } = useSWR(url, fetcher)
-  
+
   // Parâmetros de filtro para drill-down dos Paretos
   const subtypeFilterParams = useMemo(() => buildSubtypeFilterParams(appliedFilters), [appliedFilters])
 
-  const hasActiveFilters = appliedFilters.dateFrom !== "" || 
-    appliedFilters.dateTo !== "" || 
-    appliedFilters.bench !== "" || 
-    appliedFilters.models.length > 0 || 
-    appliedFilters.employeeId !== "" || 
+  const hasActiveFilters = appliedFilters.dateFrom !== "" ||
+    appliedFilters.dateTo !== "" ||
+    appliedFilters.bench !== "" ||
+    appliedFilters.models.length > 0 ||
+    appliedFilters.employeeId !== "" ||
     appliedFilters.status !== ""
 
-function applyFilters() {
+  function applyFilters() {
     setAppliedFilters({ ...filters })
     // Atualiza a URL com os filtros aplicados
     const queryString = buildURLQueryString(filters)
     router.push(`/dashboard${queryString}`, { scroll: false })
   }
-  
+
   function clearFilters() {
     setFilters(emptyFilters)
     setAppliedFilters(emptyFilters)
@@ -376,9 +376,8 @@ function applyFilters() {
                             return (
                               <div
                                 key={m}
-                                className={`flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-muted ${
-                                  isSelected ? "bg-primary/10" : ""
-                                }`}
+                                className={`flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-muted ${isSelected ? "bg-primary/10" : ""
+                                  }`}
                                 onClick={() => {
                                   if (isSelected) {
                                     setFilters((f) => ({
@@ -517,6 +516,13 @@ function applyFilters() {
             variant="danger"
           />
           <KpiCard
+            title="Aprov. 1o Teste"
+            value={`${approvedFirstPct}%`}
+            description={`${totalApprovedFirst}/${totalFirstTests} obras`}
+            icon={<ShieldCheck className="h-4 w-4" />}
+            variant="success"
+          />
+          <KpiCard
             title="Tempo Medio"
             value={data?.avg_duration ? formatDuration(data.avg_duration) : "N/A"}
             icon={<Timer className="h-4 w-4" />}
@@ -525,13 +531,6 @@ function applyFilters() {
             title="Paradas/Teste"
             value={String(data?.avg_stops_per_test || 0)}
             icon={<AlertTriangle className="h-4 w-4" />}
-          />
-          <KpiCard
-            title="Aprov. 1o Teste"
-            value={`${approvedFirstPct}%`}
-            description={`${totalApprovedFirst}/${totalFirstTests} obras`}
-            icon={<ShieldCheck className="h-4 w-4" />}
-            variant="success"
           />
         </div>
 
@@ -555,38 +554,38 @@ function applyFilters() {
                   }}
                   className="h-[300px]"
                 >
-                    <BarChart
-                      data={stopsByType}
-                      layout="vertical"
-                      margin={{ top: 5, right: 20, left: 5, bottom: 5 }}
-                      onClick={(state) => {
-                        if (state?.activePayload?.[0]?.payload) {
-                          handleStopBarClick(state.activePayload[0].payload)
-                        }
-                      }}
-                      style={{ cursor: "pointer" }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                      <XAxis type="number" />
-                      <YAxis
-                        dataKey="stop_type"
-                        type="category"
-                        width={130}
-                        tick={{ fontSize: 11 }}
-                      />
-                      <Tooltip
-                        formatter={(value: number) => [`${value}  -  Clique para ver obras`, "Quantidade"]}
-                      />
-                      <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                        {stopsByType.map((_: unknown, index: number) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={index < 3 ? CHART_RED : CHART_BLUE}
-                            className="cursor-pointer"
-                          />
-                        ))}
-                      </Bar>
-                    </BarChart>
+                  <BarChart
+                    data={stopsByType}
+                    layout="vertical"
+                    margin={{ top: 5, right: 20, left: 5, bottom: 5 }}
+                    onClick={(state) => {
+                      if (state?.activePayload?.[0]?.payload) {
+                        handleStopBarClick(state.activePayload[0].payload)
+                      }
+                    }}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" />
+                    <YAxis
+                      dataKey="stop_type"
+                      type="category"
+                      width={130}
+                      tick={{ fontSize: 11 }}
+                    />
+                    <Tooltip
+                      formatter={(value: number) => [`${value}  -  Clique para ver obras`, "Quantidade"]}
+                    />
+                    <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                      {stopsByType.map((_: unknown, index: number) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={index < 3 ? CHART_RED : CHART_BLUE}
+                          className="cursor-pointer"
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
                 </ChartContainer>
               )}
             </CardContent>
@@ -611,29 +610,29 @@ function applyFilters() {
                   }}
                   className="h-[300px]"
                 >
-                    <BarChart
-                      data={testsByModel}
-                      margin={{ top: 5, right: 20, left: 5, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="model" tick={{ fontSize: 12 }} />
-                      <YAxis />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Bar
-                        dataKey="on_time"
-                        stackId="a"
-                        fill={CHART_GREEN}
-                        radius={[0, 0, 0, 0]}
-                        name="No Tempo"
-                      />
-                      <Bar
-                        dataKey="exceeded"
-                        stackId="a"
-                        fill={CHART_RED}
-                        radius={[4, 4, 0, 0]}
-                        name="Excedeu"
-                      />
-                    </BarChart>
+                  <BarChart
+                    data={testsByModel}
+                    margin={{ top: 5, right: 20, left: 5, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="model" tick={{ fontSize: 12 }} />
+                    <YAxis />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar
+                      dataKey="on_time"
+                      stackId="a"
+                      fill={CHART_GREEN}
+                      radius={[0, 0, 0, 0]}
+                      name="No Tempo"
+                    />
+                    <Bar
+                      dataKey="exceeded"
+                      stackId="a"
+                      fill={CHART_RED}
+                      radius={[4, 4, 0, 0]}
+                      name="Excedeu"
+                    />
+                  </BarChart>
                 </ChartContainer>
               )}
             </CardContent>
@@ -672,23 +671,23 @@ function applyFilters() {
                       }}
                       className="h-[250px]"
                     >
-                        <PieChart>
-                          <Pie
-                            data={pieData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={50}
-                            outerRadius={80}
-                            paddingAngle={2}
-                            dataKey="value"
-                            label={({ name, value }) => `${name}: ${value} (${Math.round((value / total) * 100)}%)`}
-                          >
-                            {pieData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.fill} />
-                            ))}
-                          </Pie>
-                          <Tooltip formatter={(value: number) => [`${value} testes`, ""]} />
-                        </PieChart>
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={80}
+                          paddingAngle={2}
+                          dataKey="value"
+                          label={({ name, value }) => `${name}: ${value} (${Math.round((value / total) * 100)}%)`}
+                        >
+                          {pieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value: number) => [`${value} testes`, ""]} />
+                      </PieChart>
                     </ChartContainer>
                   )
                 })()}
@@ -733,14 +732,14 @@ function applyFilters() {
                       config={{ onTime: { label: "No Tempo", color: CHART_GREEN }, exceeded: { label: "Excedeu", color: CHART_RED } }}
                       className="h-[250px]"
                     >
-                        <PieChart>
-                          <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value"
-                            label={({ name, value }) => `${name}: ${value} (${Math.round((value / total) * 100)}%)`}
-                          >
-                            {pieData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
-                          </Pie>
-                          <Tooltip formatter={(value: number) => [`${value} testes`, ""]} />
-                        </PieChart>
+                      <PieChart>
+                        <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value"
+                          label={({ name, value }) => `${name}: ${value} (${Math.round((value / total) * 100)}%)`}
+                        >
+                          {pieData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
+                        </Pie>
+                        <Tooltip formatter={(value: number) => [`${value} testes`, ""]} />
+                      </PieChart>
                     </ChartContainer>
                   )
                 })()}
@@ -782,14 +781,14 @@ function applyFilters() {
                       config={{ approved: { label: "Aprovadas", color: CHART_GREEN }, notApproved: { label: "Não Aprovadas", color: CHART_RED } }}
                       className="h-[250px]"
                     >
-                        <PieChart>
-                          <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value"
-                            label={({ name, value }) => `${name}: ${value} (${Math.round((value / total) * 100)}%)`}
-                          >
-                            {pieData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
-                          </Pie>
-                          <Tooltip formatter={(value: number) => [`${value} obras`, ""]} />
-                        </PieChart>
+                      <PieChart>
+                        <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value"
+                          label={({ name, value }) => `${name}: ${value} (${Math.round((value / total) * 100)}%)`}
+                        >
+                          {pieData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
+                        </Pie>
+                        <Tooltip formatter={(value: number) => [`${value} obras`, ""]} />
+                      </PieChart>
                     </ChartContainer>
                   )
                 })()}
@@ -834,14 +833,14 @@ function applyFilters() {
                       config={{ approved: { label: "Aprovadas", color: CHART_GREEN }, notApproved: { label: "Não Aprovadas", color: CHART_RED } }}
                       className="h-[250px]"
                     >
-                        <PieChart>
-                          <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value"
-                            label={({ name, value }) => `${name}: ${value} (${Math.round((value / total) * 100)}%)`}
-                          >
-                            {pieData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
-                          </Pie>
-                          <Tooltip formatter={(value: number) => [`${value} obras`, ""]} />
-                        </PieChart>
+                      <PieChart>
+                        <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value"
+                          label={({ name, value }) => `${name}: ${value} (${Math.round((value / total) * 100)}%)`}
+                        >
+                          {pieData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
+                        </Pie>
+                        <Tooltip formatter={(value: number) => [`${value} obras`, ""]} />
+                      </PieChart>
                     </ChartContainer>
                   )
                 })()}
