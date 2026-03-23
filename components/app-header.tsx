@@ -56,7 +56,7 @@ export function AppHeader() {
             </Button>
           )}
           {pathname !== "/" && (
-            <Button variant="default" size="sm" asChild>
+            <Button className="bg-black" size="sm" asChild>
               <Link href="https://v0-avaliacao-de-repositorio.vercel.app/" className="flex items-center gap-2">
                 <ClipboardList className="h-4 w-4" />
                 <span className="hidden sm:inline">QC Ações</span>
