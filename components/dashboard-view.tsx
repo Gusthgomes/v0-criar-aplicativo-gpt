@@ -163,10 +163,18 @@ export function DashboardView() {
   const handleStopBarClick = useCallback(
     (data: { stop_type?: string }) => {
       if (data?.stop_type) {
-        router.push(`/paradas?type=${encodeURIComponent(data.stop_type)}`)
+        // Passar os filtros aplicados para a página de paradas
+        const params = new URLSearchParams()
+        params.set("type", data.stop_type)
+        if (appliedFilters.dateFrom) params.set("date_from", appliedFilters.dateFrom)
+        if (appliedFilters.dateTo) params.set("date_to", appliedFilters.dateTo)
+        if (appliedFilters.bench) params.set("bench", appliedFilters.bench)
+        if (appliedFilters.models.length > 0) params.set("models", appliedFilters.models.join(","))
+        if (appliedFilters.employeeId) params.set("employee_id", appliedFilters.employeeId)
+        router.push(`/paradas?${params.toString()}`)
       }
     },
-    [router]
+    [router, appliedFilters]
   )
 
   const url = useMemo(() => buildQueryString(appliedFilters), [appliedFilters])
@@ -573,9 +581,22 @@ export function DashboardView() {
                       width={130}
                       tick={{ fontSize: 11 }}
                     />
-                    <Tooltip
-                      formatter={(value: number) => [`${value}  -  Clique para ver obras`, "Quantidade"]}
-                    />
+<Tooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload as { stop_type: string; count: number; total_duration: number }
+                            return (
+                              <div className="rounded-md border bg-background p-2 shadow-md">
+                                <p className="font-medium">{data.stop_type}</p>
+                                <p className="text-sm text-muted-foreground">Quantidade: {data.count}</p>
+                                <p className="text-sm text-muted-foreground">Tempo total: {formatDuration(data.total_duration)}</p>
+                                <p className="mt-1 text-xs text-primary">Clique para ver obras</p>
+                              </div>
+                            )
+                          }
+                          return null
+                        }}
+                      />
                     <Bar dataKey="count" radius={[0, 4, 4, 0]}>
                       {stopsByType.map((_: unknown, index: number) => (
                         <Cell
