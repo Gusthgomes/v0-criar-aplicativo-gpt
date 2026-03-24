@@ -6,6 +6,11 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const stopType = searchParams.get("type")
+    const dateFrom = searchParams.get("date_from")
+    const dateTo = searchParams.get("date_to")
+    const bench = searchParams.get("bench")
+    const models = searchParams.get("models")
+    const employeeId = searchParams.get("employee_id")
 
     if (!stopType) {
       return NextResponse.json(
@@ -14,8 +19,46 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const results = await sql`
-      SELECT
+    // Construir condições de filtro
+    const conditions: string[] = [`s.stop_type = '${stopType.replace(/'/g, "''")}'`]
+    
+    if (dateFrom && dateTo) {
+      conditions.push(`(
+        (t.finished_at IS NOT NULL AND t.finished_at >= '${dateFrom}T00:00:00.000Z' AND t.finished_at <= '${dateTo}T23:59:59.999Z')
+        OR 
+        (t.finished_at IS NULL AND t.created_at >= '${dateFrom}T00:00:00.000Z' AND t.created_at <= '${dateTo}T23:59:59.999Z')
+      )`)
+    } else if (dateFrom) {
+      conditions.push(`(
+        (t.finished_at IS NOT NULL AND t.finished_at >= '${dateFrom}T00:00:00.000Z')
+        OR 
+        (t.finished_at IS NULL AND t.created_at >= '${dateFrom}T00:00:00.000Z')
+      )`)
+    } else if (dateTo) {
+      conditions.push(`(
+        (t.finished_at IS NOT NULL AND t.finished_at <= '${dateTo}T23:59:59.999Z')
+        OR 
+        (t.finished_at IS NULL AND t.created_at <= '${dateTo}T23:59:59.999Z')
+      )`)
+    }
+    
+    if (bench) {
+      conditions.push(`t.bench = ${parseInt(bench)}`)
+    }
+    
+    if (models) {
+      const modelList = models.split(",").map(m => `'${m.trim()}'`).join(",")
+      conditions.push(`t.model IN (${modelList})`)
+    }
+    
+    if (employeeId) {
+      conditions.push(`t.employee_id = '${employeeId.replace(/'/g, "''")}'`)
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : ""
+
+    const results = await sql(
+      `SELECT
         t.id as test_id,
         t.work_number,
         t.model,
@@ -28,14 +71,15 @@ export async function GET(request: NextRequest) {
         t.created_at,
         s.id as stop_id,
         s.stop_type,
+        s.sub_type,
         s.duration_minutes as stop_duration,
         s.observations,
         s.created_at as stop_created_at
       FROM stops s
       JOIN tests t ON t.id = s.test_id
-      WHERE s.stop_type = ${stopType}
-      ORDER BY t.created_at DESC
-    `
+      ${whereClause}
+      ORDER BY t.created_at DESC`
+    )
 
     // Agrupar por obra
     const worksMap = new Map<string, {
@@ -99,10 +143,17 @@ export async function GET(request: NextRequest) {
       tests: Array.from(w.tests.values()),
     }))
 
+    // Calcular tempo total de paradas
+    const totalDuration = results.reduce(
+      (sum: number, r: { stop_duration: number | null }) => sum + (r.stop_duration || 0),
+      0
+    )
+
     return NextResponse.json({
       stop_type: stopType,
       total_works: works.length,
       total_occurrences: results.length,
+      total_duration: totalDuration,
       works,
     })
   } catch (error) {

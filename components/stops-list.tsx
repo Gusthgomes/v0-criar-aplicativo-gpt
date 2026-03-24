@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge"
 import { AlertTriangle, Clock } from "lucide-react"
+import { STOPS_NOT_COUNTED_IN_TIME } from "@/lib/constants"
 
 interface Stop {
   id: number
@@ -33,7 +34,10 @@ export function StopsList({ stops }: StopsListProps) {
     )
   }
 
-  const totalMinutes = stops.reduce((acc, s) => acc + (s.duration_minutes || 0), 0)
+  // Excluir paradas de Refeição do tempo total parado
+  const totalMinutes = stops
+    .filter((s) => !STOPS_NOT_COUNTED_IN_TIME.includes(s.stop_type as typeof STOPS_NOT_COUNTED_IN_TIME[number]))
+    .reduce((acc, s) => acc + (s.duration_minutes || 0), 0)
 
   return (
     <div className="flex flex-col gap-3">

@@ -42,11 +42,38 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json())
 export function StopDetailView() {
   const searchParams = useSearchParams()
   const stopType = searchParams.get("type") || ""
+  const dateFrom = searchParams.get("date_from") || ""
+  const dateTo = searchParams.get("date_to") || ""
+  const bench = searchParams.get("bench") || ""
+  const models = searchParams.get("models") || ""
+  const employeeId = searchParams.get("employee_id") || ""
 
-  const { data, error, isLoading } = useSWR(
-    stopType ? `/api/stops/by-type?type=${encodeURIComponent(stopType)}` : null,
-    fetcher
-  )
+  // Construir URL com todos os filtros
+  const apiUrl = stopType ? (() => {
+    const params = new URLSearchParams()
+    params.set("type", stopType)
+    if (dateFrom) params.set("date_from", dateFrom)
+    if (dateTo) params.set("date_to", dateTo)
+    if (bench) params.set("bench", bench)
+    if (models) params.set("models", models)
+    if (employeeId) params.set("employee_id", employeeId)
+    return `/api/stops/by-type?${params.toString()}`
+  })() : null
+
+  const { data, error, isLoading } = useSWR(apiUrl, fetcher)
+
+  // Descrição dos filtros aplicados
+  const filterDescriptions: string[] = []
+  if (dateFrom && dateTo) {
+    filterDescriptions.push(`Período: ${new Date(dateFrom).toLocaleDateString("pt-BR")} a ${new Date(dateTo).toLocaleDateString("pt-BR")}`)
+  } else if (dateFrom) {
+    filterDescriptions.push(`A partir de: ${new Date(dateFrom).toLocaleDateString("pt-BR")}`)
+  } else if (dateTo) {
+    filterDescriptions.push(`Até: ${new Date(dateTo).toLocaleDateString("pt-BR")}`)
+  }
+  if (models) filterDescriptions.push(`Modelos: ${models}`)
+  if (bench) filterDescriptions.push(`Banca: ${bench}`)
+  if (employeeId) filterDescriptions.push(`8ID: ${employeeId}`)
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -71,7 +98,9 @@ export function StopDetailView() {
                 {stopType || "Carregando..."}
               </h1>
               <p className="text-sm text-muted-foreground">
-                Todas as obras que tiveram essa parada
+                {filterDescriptions.length > 0 
+                  ? `Filtros aplicados: ${filterDescriptions.join(" | ")}`
+                  : "Todas as obras que tiveram essa parada"}
               </p>
             </div>
           </div>
@@ -94,7 +123,7 @@ export function StopDetailView() {
         {data && !data.error && (
           <>
             {/* KPIs */}
-            <div className="mb-6 grid grid-cols-3 gap-4">
+            <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
               <Card>
                 <CardContent className="flex flex-col gap-1 py-4">
                   <div className="flex items-center gap-2 text-muted-foreground">
@@ -116,6 +145,19 @@ export function StopDetailView() {
                   </div>
                   <p className="text-2xl font-bold text-foreground">
                     {data.total_occurrences}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="flex flex-col gap-1 py-4">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                    <span className="text-xs font-medium">
+                      Tempo Total
+                    </span>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground">
+                    {formatDuration(data.total_duration || 0)}
                   </p>
                 </CardContent>
               </Card>
