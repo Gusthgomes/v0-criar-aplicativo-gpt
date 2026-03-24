@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
       `SELECT 
         t.*,
         COUNT(s.id)::int as stop_count,
-        COALESCE(SUM(s.duration_minutes), 0)::int as total_stop_duration
+        COALESCE(SUM(CASE WHEN s.stop_type != 'Refeição' THEN s.duration_minutes ELSE 0 END), 0)::int as total_stop_duration
       FROM tests t
       LEFT JOIN stops s ON s.test_id = t.id
       ${whereClause}
