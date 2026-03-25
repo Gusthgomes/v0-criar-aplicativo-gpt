@@ -87,8 +87,8 @@ function parseQuery(input: string): { type: string; value: string } | null {
 async function buscarObra(workNumber: string): Promise<string> {
   const tests = await sql`
     SELECT t.*, 
-      (SELECT COUNT(*) FROM stops WHERE test_id = t.id)::int as stop_count,
-      (SELECT COALESCE(SUM(duration_minutes), 0) FROM stops WHERE test_id = t.id)::int as total_stop_duration
+      (SELECT COUNT(*) FROM stops WHERE test_id = t.id AND stop_type != 'Refeição')::int as stop_count,
+      (SELECT COALESCE(SUM(duration_minutes), 0) FROM stops WHERE test_id = t.id AND stop_type != 'Refeição')::int as total_stop_duration
     FROM tests t
     WHERE t.work_number = ${workNumber}
     ORDER BY t.created_at DESC
@@ -300,7 +300,7 @@ async function buscarParada(stopType: string): Promise<string> {
 async function buscarData(date: string): Promise<string> {
   const tests = await sql`
     SELECT t.*, 
-      (SELECT COUNT(*) FROM stops WHERE test_id = t.id)::int as stop_count
+      (SELECT COUNT(*) FROM stops WHERE test_id = t.id AND stop_type != 'Refeição')::int as stop_count
     FROM tests t
     WHERE DATE(t.created_at) = ${date}::date
     ORDER BY t.created_at DESC
