@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
       `SELECT s.stop_type, COUNT(*)::int as count, COALESCE(SUM(s.duration_minutes), 0)::int as total_duration
       FROM stops s
       JOIN tests t ON t.id = s.test_id
-      ${stopJoinWhere ? stopJoinWhere : stopsQuery}
+      ${stopJoinWhere ? stopJoinWhere + " AND s.stop_type != 'Refeição'" : (stopsQuery ? stopsQuery + " AND s.stop_type != 'Refeição'" : "WHERE s.stop_type != 'Refeição'")}
       GROUP BY s.stop_type
       ORDER BY count DESC`
     )
@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
     )
 
     const totalStops = await sql(
-      `SELECT COUNT(*)::int as count FROM stops s JOIN tests t ON t.id = s.test_id ${stopJoinWhere}`
+      `SELECT COUNT(*)::int as count FROM stops s JOIN tests t ON t.id = s.test_id ${stopJoinWhere ? stopJoinWhere + " AND s.stop_type != 'Refeição'" : "WHERE s.stop_type != 'Refeição'"}`
     )
 
     const pendingTests = await sql(
