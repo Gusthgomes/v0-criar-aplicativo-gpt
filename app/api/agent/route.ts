@@ -75,6 +75,17 @@ function parseQuery(input: string): { type: string; value: string } | null {
     return { type: "estatisticas", value: "" }
   }
 
+  // Busca por status: "status em andamento", "obras pausadas", "testes excederam"
+  const statusMatch = text.match(/(?:status|obras?|testes?)\s*(?:que\s*)?(em andamento|andamento|pausad[oa]s?|excede(?:u|ram)?|no tempo|finalizad[oa]s?)/i)
+  if (statusMatch) {
+    const statusValue = statusMatch[1].toLowerCase()
+    if (statusValue.includes("andamento")) return { type: "status", value: "em_andamento" }
+    if (statusValue.includes("pausad")) return { type: "status", value: "pausado" }
+    if (statusValue.includes("exced")) return { type: "status", value: "excedeu" }
+    if (statusValue.includes("tempo")) return { type: "status", value: "no_tempo" }
+    if (statusValue.includes("finaliz")) return { type: "status", value: "finalizado" }
+  }
+
   // Ajuda
   if (text.includes("ajuda") || text.includes("help") || text.includes("comando")) {
     return { type: "ajuda", value: "" }
@@ -385,6 +396,80 @@ async function buscarEstatisticas(): Promise<string> {
   return response
 }
 
+// Busca testes por status
+async function buscarStatus(status: string): Promise<string> {
+  let statusLabel = ""
+  let query = ""
+  
+  switch (status) {
+    case "em_andamento":
+      statusLabel = "Em Andamento"
+      query = `SELECT t.*, 
+        (SELECT COUNT(*) FROM stops WHERE test_id = t.id AND stop_type != 'Refeição')::int as stop_count
+        FROM tests t
+        WHERE t.finished_at IS NULL AND t.is_complete IS NOT FALSE
+        ORDER BY t.created_at DESC
+        LIMIT 50`
+      break
+    case "pausado":
+      statusLabel = "Pausados"
+      query = `SELECT t.*, 
+        (SELECT COUNT(*) FROM stops WHERE test_id = t.id AND stop_type != 'Refeição')::int as stop_count
+        FROM tests t
+        WHERE t.finished_at IS NULL AND t.is_complete = FALSE
+        ORDER BY t.created_at DESC
+        LIMIT 50`
+      break
+    case "excedeu":
+      statusLabel = "Excederam o Tempo"
+      query = `SELECT t.*, 
+        (SELECT COUNT(*) FROM stops WHERE test_id = t.id AND stop_type != 'Refeição')::int as stop_count
+        FROM tests t
+        WHERE t.finished_at IS NOT NULL AND t.actual_duration_minutes > t.expected_duration_minutes
+        ORDER BY t.finished_at DESC
+        LIMIT 50`
+      break
+    case "no_tempo":
+      statusLabel = "No Tempo"
+      query = `SELECT t.*, 
+        (SELECT COUNT(*) FROM stops WHERE test_id = t.id AND stop_type != 'Refeição')::int as stop_count
+        FROM tests t
+        WHERE t.finished_at IS NOT NULL AND t.actual_duration_minutes <= t.expected_duration_minutes
+        ORDER BY t.finished_at DESC
+        LIMIT 50`
+      break
+    case "finalizado":
+      statusLabel = "Finalizados"
+      query = `SELECT t.*, 
+        (SELECT COUNT(*) FROM stops WHERE test_id = t.id AND stop_type != 'Refeição')::int as stop_count
+        FROM tests t
+        WHERE t.finished_at IS NOT NULL
+        ORDER BY t.finished_at DESC
+        LIMIT 50`
+      break
+    default:
+      return "Status não reconhecido."
+  }
+
+  const tests = await sql(query)
+
+  if (tests.length === 0) {
+    return `Nenhum teste encontrado com status **${statusLabel}**.`
+  }
+
+  let response = `**Testes ${statusLabel}** (${tests.length} encontrado${tests.length > 1 ? "s" : ""})\n\n`
+
+  for (const test of tests) {
+    const tempoInfo = test.actual_duration_minutes 
+      ? `${formatDuration(test.actual_duration_minutes)}/${formatDuration(test.expected_duration_minutes)}`
+      : `Est: ${formatDuration(test.expected_duration_minutes)}`
+    
+    response += `- Obra **${test.work_number}** | ${test.model} | Banca ${test.bench} | 8ID: ${test.employee_id} | ${tempoInfo} | ${test.stop_count} parada(s)\n`
+  }
+
+  return response
+}
+
 // Retorna ajuda
 function getAjuda(): string {
   return `**Comandos disponíveis:**
@@ -406,6 +491,9 @@ function getAjuda(): string {
 
 **Buscar por data:**
 - \`hoje\`, \`ontem\` ou \`03/03/2026\`
+
+**Buscar por status:**
+- \`obras em andamento\`, \`testes pausados\`, \`obras que excederam\`, \`testes no tempo\`, \`finalizados\`
 
 **Estatísticas gerais:**
 - \`estatísticas\` ou \`resumo geral\`
@@ -449,10 +537,13 @@ export async function POST(req: Request) {
       case "parada":
         response = await buscarParada(parsed.value)
         break
-      case "data":
-        response = await buscarData(parsed.value)
-        break
-      case "estatisticas":
+case "data":
+  response = await buscarData(parsed.value)
+  break
+  case "status":
+  response = await buscarStatus(parsed.value)
+  break
+  case "estatisticas":
         response = await buscarEstatisticas()
         break
       case "ajuda":
