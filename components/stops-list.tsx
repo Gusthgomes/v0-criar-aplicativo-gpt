@@ -91,6 +91,11 @@ export function StopsList({ stops }: StopsListProps) {
                 </span>
               </div>
             </div>
+            {stop.material_code && (
+              <p className="text-xs text-muted-foreground">
+                Cod. Material: {stop.material_code}
+              </p>
+            )}
             {stop.observations && (
               <p className="text-xs text-muted-foreground">
                 {stop.observations}
