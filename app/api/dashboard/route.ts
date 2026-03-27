@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
       JOIN tests t ON t.id = s.test_id
       ${stopJoinWhere ? stopJoinWhere + " AND s.stop_type != 'Refeição'" : (stopsQuery ? stopsQuery + " AND s.stop_type != 'Refeição'" : "WHERE s.stop_type != 'Refeição'")}
       GROUP BY s.stop_type
-      ORDER BY count DESC`
+      ORDER BY total_duration DESC`
     )
 
     const testsByModel = await sql(

@@ -6,6 +6,7 @@ interface Stop {
   id: number
   stop_type: string
   sub_type: string | null
+  material_code: string | null
   observations: string | null
   duration_minutes: number | null
   created_at: string

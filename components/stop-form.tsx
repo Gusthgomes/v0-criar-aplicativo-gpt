@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -37,6 +38,7 @@ export function StopForm({ testId, onStopAdded, isOnline = true }: StopFormProps
   // classificacao
   const [stopType, setStopType] = useState("")
   const [subType, setSubType] = useState("")
+  const [materialCode, setMaterialCode] = useState("")
   const [observations, setObservations] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -121,6 +123,7 @@ export function StopForm({ testId, onStopAdded, isOnline = true }: StopFormProps
           body: {
             stop_type: stopType,
             sub_type: subType || null,
+            material_code: materialCode.trim() || null,
             observations: observations.trim() || null,
             duration_minutes: durationMinutes,
           },
@@ -144,6 +147,7 @@ export function StopForm({ testId, onStopAdded, isOnline = true }: StopFormProps
       setPhase("idle")
       setStopType("")
       setSubType("")
+      setMaterialCode("")
       setObservations("")
       setFinalSeconds(0)
       setElapsedSeconds(0)
@@ -303,6 +307,22 @@ export function StopForm({ testId, onStopAdded, isOnline = true }: StopFormProps
               </Select>
             </div>
           )}
+
+          <div className="flex flex-col gap-2">
+            <Label className="text-sm font-medium text-foreground">
+              Codigo do Material{" "}
+              <span className="font-normal text-muted-foreground">(opcional)</span>
+            </Label>
+            <Input
+              placeholder="Ex: 123456789012345"
+              value={materialCode}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, "").slice(0, 15)
+                setMaterialCode(value)
+              }}
+              maxLength={15}
+            />
+          </div>
 
           <div className="flex flex-col gap-2">
             <Label className="text-sm font-medium text-foreground">
