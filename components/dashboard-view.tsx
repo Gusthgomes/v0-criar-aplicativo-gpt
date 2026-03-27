@@ -544,11 +544,11 @@ export function DashboardView() {
 
         {/* Charts */}
         <div className="grid gap-6 md:grid-cols-2">
-          {/* Paradas mais comuns */}
+          {/* Paradas por tempo total */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Paradas Mais Comuns</CardTitle>
-              <CardDescription>Top 10 tipos de parada registrados - clique em uma barra para ver as obras</CardDescription>
+              <CardTitle className="text-base">Paradas por Tempo Total</CardTitle>
+              <CardDescription>Ordenado por maior tempo acumulado - clique para ver detalhes</CardDescription>
             </CardHeader>
             <CardContent>
               {stopsByType.length === 0 ? (
@@ -558,7 +558,7 @@ export function DashboardView() {
               ) : (
                 <ChartContainer
                   config={{
-                    count: { label: "Quantidade", color: CHART_BLUE },
+                    total_duration: { label: "Tempo Total", color: CHART_RED },
                   }}
                   className="h-[300px]"
                 >
@@ -574,30 +574,37 @@ export function DashboardView() {
                     style={{ cursor: "pointer" }}
                   >
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                    <XAxis type="number" />
+                    <XAxis 
+                      type="number" 
+                      tickFormatter={(value) => {
+                        const hours = Math.floor(value / 60)
+                        const mins = value % 60
+                        return hours > 0 ? `${hours}h${mins > 0 ? mins : ""}` : `${mins}min`
+                      }}
+                    />
                     <YAxis
                       dataKey="stop_type"
                       type="category"
                       width={130}
                       tick={{ fontSize: 11 }}
                     />
-<Tooltip
-                        content={({ active, payload }) => {
-                          if (active && payload && payload.length) {
-                            const data = payload[0].payload as { stop_type: string; count: number; total_duration: number }
-                            return (
-                              <div className="rounded-md border bg-background p-2 shadow-md">
-                                <p className="font-medium">{data.stop_type}</p>
-                                <p className="text-sm text-muted-foreground">Quantidade: {data.count}</p>
-                                <p className="text-sm text-muted-foreground">Tempo total: {formatDuration(data.total_duration)}</p>
-                                <p className="mt-1 text-xs text-primary">Clique para ver obras</p>
-                              </div>
-                            )
-                          }
-                          return null
-                        }}
-                      />
-                    <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload as { stop_type: string; count: number; total_duration: number }
+                          return (
+                            <div className="rounded-md border bg-background p-2 shadow-md">
+                              <p className="font-medium">{data.stop_type}</p>
+                              <p className="text-sm text-muted-foreground">Tempo total: {formatDuration(data.total_duration)}</p>
+                              <p className="text-sm text-muted-foreground">Quantidade: {data.count} ocorrencias</p>
+                              <p className="mt-1 text-xs text-primary">Clique para ver obras</p>
+                            </div>
+                          )
+                        }
+                        return null
+                      }}
+                    />
+                    <Bar dataKey="total_duration" radius={[0, 4, 4, 0]}>
                       {stopsByType.map((_: unknown, index: number) => (
                         <Cell
                           key={`cell-${index}`}
