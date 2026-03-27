@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
       ${whereClause}
       GROUP BY t.id
       ORDER BY t.created_at DESC
-      LIMIT 50`
+      LIMIT 25`
     )
 
     const totalStops = await sql(

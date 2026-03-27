@@ -574,8 +574,8 @@ export function DashboardView() {
                     style={{ cursor: "pointer" }}
                   >
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                    <XAxis 
-                      type="number" 
+                    <XAxis
+                      type="number"
                       tick={{ fontSize: 10 }}
                       tickFormatter={(value) => {
                         const hours = Math.floor(value / 60)
@@ -892,7 +892,7 @@ export function DashboardView() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Testes Recentes</CardTitle>
-            <CardDescription>Ultimos 50 testes registrados</CardDescription>
+            <CardDescription>Testes referentes a seleção de filtros.</CardDescription>
           </CardHeader>
           <CardContent>
             {!data?.recent_tests || data.recent_tests.length === 0 ? (
