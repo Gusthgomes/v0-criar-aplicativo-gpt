@@ -565,7 +565,7 @@ export function DashboardView() {
                   <BarChart
                     data={stopsByType}
                     layout="vertical"
-                    margin={{ top: 5, right: 20, left: 5, bottom: 5 }}
+                    margin={{ top: 5, right: 40, left: 5, bottom: 20 }}
                     onClick={(state) => {
                       if (state?.activePayload?.[0]?.payload) {
                         handleStopBarClick(state.activePayload[0].payload)
@@ -576,10 +576,13 @@ export function DashboardView() {
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                     <XAxis 
                       type="number" 
+                      tick={{ fontSize: 10 }}
                       tickFormatter={(value) => {
                         const hours = Math.floor(value / 60)
                         const mins = value % 60
-                        return hours > 0 ? `${hours}h${mins > 0 ? mins : ""}` : `${mins}min`
+                        if (hours > 0 && mins > 0) return `${hours}h${mins}`
+                        if (hours > 0) return `${hours}h`
+                        return `${mins}m`
                       }}
                     />
                     <YAxis
@@ -788,7 +791,7 @@ export function DashboardView() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Aprovação no Primeiro Teste: M76</CardTitle>
-            <CardDescription>Aprovadas vs não aprovadas e motivos da não aprovação</CardDescription>
+            <CardDescription>Aprovadas vs não aprovadas e motivos da n��o aprovação</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-6 md:grid-cols-2">
