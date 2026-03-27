@@ -6,6 +6,7 @@ interface Stop {
   id: number
   stop_type: string
   sub_type: string | null
+  material_code: string | null
   observations: string | null
   duration_minutes: number | null
   created_at: string
@@ -90,6 +91,11 @@ export function StopsList({ stops }: StopsListProps) {
                 </span>
               </div>
             </div>
+            {stop.material_code && (
+              <p className="text-xs text-muted-foreground">
+                Cod. Material: {stop.material_code}
+              </p>
+            )}
             {stop.observations && (
               <p className="text-xs text-muted-foreground">
                 {stop.observations}
