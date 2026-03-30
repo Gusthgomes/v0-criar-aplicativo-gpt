@@ -94,7 +94,7 @@ export function ParetoDrilldown({
             <BarChart data={subtypeData} layout="vertical" margin={{ top: 5, right: 20, left: 5, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} />
               <XAxis type="number" />
-              <YAxis dataKey="sub_type" type="category" width={130} tick={{ fontSize: 10 }} />
+              <YAxis dataKey="sub_type" type="category" width={130} tick={{ fontSize: 10 }} interval={0} />
               <Tooltip formatter={(value: number) => [`${value} ocorrencias`, "Quantidade"]} />
               <Bar dataKey="count" fill={CHART_BLUE} radius={[0, 4, 4, 0]} />
             </BarChart>
@@ -121,6 +121,7 @@ export function ParetoDrilldown({
             type="category" 
             width={120} 
             tick={{ fontSize: 10 }}
+            interval={0}
           />
           <Tooltip 
             formatter={(value: number) => [`${value} ocorrencias`, "Quantidade"]}
