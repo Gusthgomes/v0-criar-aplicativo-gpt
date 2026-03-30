@@ -38,6 +38,7 @@ import {
   Timer,
   AlertTriangle,
   Hash,
+  FileText,
 } from "lucide-react"
 
 const fetcher = (url: string) =>
@@ -45,6 +46,204 @@ const fetcher = (url: string) =>
     if (!r.ok) throw new Error("not_found")
     return r.json()
   })
+
+// Função para gerar relatório imprimível (exclui 8ID)
+function gerarRelatorio(data: {
+  work_number: string
+  summary: {
+    total_tests: number
+    finished_tests: number
+    on_time: number
+    exceeded: number
+    on_time_percentage: number
+    avg_duration: number | null
+    total_stops: number
+    avg_stops_per_test: number
+  }
+  top_stop_types: { stop_type: string; count: number }[]
+  tests: {
+    id: number
+    model: string
+    bench: number
+    expected_duration_minutes: number
+    actual_duration_minutes: number | null
+    finished_at: string | null
+    created_at: string
+    stop_count: number
+    stops: {
+      id: number
+      stop_type: string
+      sub_type: string | null
+      material_code: string | null
+      duration_minutes: number | null
+      observations: string | null
+      created_at: string
+    }[]
+  }[]
+}) {
+  const formatDur = (min: number) => {
+    const h = Math.floor(min / 60)
+    const m = min % 60
+    if (h === 0) return `${m}min`
+    if (m === 0) return `${h}h`
+    return `${h}h${m.toString().padStart(2, "0")}min`
+  }
+
+  const reportWindow = window.open("", "_blank")
+  if (!reportWindow) return
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8">
+      <title>Relatorio Obra ${data.work_number}</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; padding: 20px; font-size: 12px; }
+        h1 { font-size: 18px; margin-bottom: 5px; }
+        h2 { font-size: 14px; margin: 15px 0 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+        .header { margin-bottom: 20px; }
+        .header p { color: #666; font-size: 11px; }
+        .summary { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; }
+        .summary-item { background: #f5f5f5; padding: 10px; border-radius: 4px; min-width: 120px; }
+        .summary-item .label { font-size: 10px; color: #666; }
+        .summary-item .value { font-size: 16px; font-weight: bold; }
+        .test { margin-bottom: 20px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        .test-header { display: flex; gap: 15px; margin-bottom: 10px; flex-wrap: wrap; }
+        .test-header .field { }
+        .test-header .field .label { font-size: 10px; color: #666; }
+        .test-header .field .value { font-weight: 500; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+        .badge-success { background: #22a06b; color: white; }
+        .badge-danger { background: #dc2626; color: white; }
+        .badge-outline { border: 1px solid #ccc; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
+        th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+        th { background: #f5f5f5; font-size: 10px; }
+        .no-print { margin-bottom: 20px; }
+        @media print { .no-print { display: none; } }
+      </style>
+    </head>
+    <body>
+      <div class="no-print">
+        <button onclick="window.print()" style="padding: 10px 20px; font-size: 14px; cursor: pointer;">
+          Imprimir Relatorio
+        </button>
+      </div>
+      
+      <div class="header">
+        <h1>Relatorio da Obra ${data.work_number}</h1>
+        <p>Gerado em ${new Date().toLocaleDateString("pt-BR")} as ${new Date().toLocaleTimeString("pt-BR")}</p>
+      </div>
+
+      <h2>Resumo</h2>
+      <div class="summary">
+        <div class="summary-item">
+          <div class="label">Total de Testes</div>
+          <div class="value">${data.summary.total_tests}</div>
+        </div>
+        <div class="summary-item">
+          <div class="label">No Tempo</div>
+          <div class="value">${data.summary.on_time_percentage}%</div>
+        </div>
+        <div class="summary-item">
+          <div class="label">Excederam</div>
+          <div class="value">${data.summary.exceeded}</div>
+        </div>
+        <div class="summary-item">
+          <div class="label">Tempo Medio</div>
+          <div class="value">${data.summary.avg_duration ? formatDur(data.summary.avg_duration) : "N/A"}</div>
+        </div>
+        <div class="summary-item">
+          <div class="label">Total de Paradas</div>
+          <div class="value">${data.summary.total_stops}</div>
+        </div>
+      </div>
+
+      ${data.top_stop_types.length > 0 ? `
+        <h2>Paradas Mais Comuns</h2>
+        <p style="margin-bottom: 15px;">${data.top_stop_types.slice(0, 5).map(s => `${s.stop_type} (${s.count})`).join(", ")}</p>
+      ` : ""}
+
+      <h2>Historico de Testes</h2>
+      ${data.tests.map(test => {
+        const isFinished = !!test.finished_at
+        const withinTime = isFinished && test.actual_duration_minutes !== null && test.actual_duration_minutes <= test.expected_duration_minutes
+        
+        return `
+          <div class="test">
+            <div class="test-header">
+              <div class="field">
+                <div class="label">Teste</div>
+                <div class="value">#${test.id}</div>
+              </div>
+              <div class="field">
+                <div class="label">Modelo</div>
+                <div class="value">${test.model}</div>
+              </div>
+              <div class="field">
+                <div class="label">Banca</div>
+                <div class="value">${test.bench}</div>
+              </div>
+              <div class="field">
+                <div class="label">Data</div>
+                <div class="value">${new Date(test.created_at).toLocaleDateString("pt-BR")}</div>
+              </div>
+              <div class="field">
+                <div class="label">Tempo Estipulado</div>
+                <div class="value">${formatDur(test.expected_duration_minutes)}</div>
+              </div>
+              <div class="field">
+                <div class="label">Tempo Real</div>
+                <div class="value">${test.actual_duration_minutes ? formatDur(test.actual_duration_minutes) : "Em andamento"}</div>
+              </div>
+              <div class="field">
+                <div class="label">Status</div>
+                <div class="value">
+                  ${isFinished 
+                    ? `<span class="badge ${withinTime ? "badge-success" : "badge-danger"}">${withinTime ? "No Tempo" : "Excedeu"}</span>`
+                    : `<span class="badge badge-outline">Em andamento</span>`
+                  }
+                </div>
+              </div>
+            </div>
+            ${test.stops.length > 0 ? `
+              <table>
+                <thead>
+                  <tr>
+                    <th>Tipo de Parada</th>
+                    <th>Subtipo</th>
+                    <th>Cod. Material</th>
+                    <th>Duracao</th>
+                    <th>Observacoes</th>
+                    <th>Horario</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${test.stops.map(stop => `
+                    <tr>
+                      <td>${stop.stop_type}</td>
+                      <td>${stop.sub_type || "-"}</td>
+                      <td>${stop.material_code || "-"}</td>
+                      <td>${stop.duration_minutes ? formatDur(stop.duration_minutes) : "-"}</td>
+                      <td>${stop.observations || "-"}</td>
+                      <td>${new Date(stop.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</td>
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
+            ` : "<p style='color: #666; font-style: italic;'>Nenhuma parada registrada</p>"}
+          </div>
+        `
+      }).join("")}
+    </body>
+    </html>
+  `
+
+  reportWindow.document.write(html)
+  reportWindow.document.close()
+}
 
 export function WorkSearchView() {
   const searchParams = useSearchParams()
@@ -218,13 +417,24 @@ export function WorkSearchView() {
 
             {/* Test Details */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">
-                  Historico de Testes - Obra {data.work_number}
-                </CardTitle>
-                <CardDescription>
-                  {data.tests.length} teste(s) registrado(s)
-                </CardDescription>
+              <CardHeader className="flex flex-row items-start justify-between">
+                <div>
+                  <CardTitle className="text-base">
+                    Historico de Testes - Obra {data.work_number}
+                  </CardTitle>
+                  <CardDescription>
+                    {data.tests.length} teste(s) registrado(s)
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => gerarRelatorio(data)}
+                  className="flex items-center gap-2"
+                >
+                  <FileText className="h-4 w-4" />
+                  <span className="hidden sm:inline">Gerar Relatorio</span>
+                </Button>
               </CardHeader>
               <CardContent>
                 <Accordion type="multiple" className="w-full">
