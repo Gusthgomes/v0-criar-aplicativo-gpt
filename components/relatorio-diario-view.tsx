@@ -16,14 +16,8 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Search, Loader2, FileText, Calendar } from "lucide-react"
-import { formatDuration, MODELS } from "@/lib/constants"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { formatDuration, MODELS, STOP_TYPES } from "@/lib/constants"
+import { MultiSelect } from "@/components/ui/multi-select"
 
 interface Stop {
   id: number
@@ -58,7 +52,8 @@ interface ReportData {
 
 export function RelatorioDiarioView() {
   const [date, setDate] = useState("")
-  const [model, setModel] = useState("")
+  const [selectedModels, setSelectedModels] = useState<string[]>([])
+  const [selectedStops, setSelectedStops] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [data, setData] = useState<ReportData | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -75,7 +70,8 @@ export function RelatorioDiarioView() {
 
     try {
       let url = `/api/relatorio-diario?date=${date}`
-      if (model && model !== "all") url += `&model=${model}`
+      if (selectedModels.length > 0) url += `&models=${selectedModels.join(",")}`
+      if (selectedStops.length > 0) url += `&stops=${selectedStops.join(",")}`
       const response = await fetch(url)
       if (!response.ok) throw new Error("Erro ao buscar dados")
       const result = await response.json()
@@ -245,8 +241,8 @@ export function RelatorioDiarioView() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-              <div className="flex-1">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div>
                 <Label htmlFor="date" className="text-sm font-medium">
                   Data
                 </Label>
@@ -258,36 +254,44 @@ export function RelatorioDiarioView() {
                   className="mt-1"
                 />
               </div>
-              <div className="flex-1">
-                <Label htmlFor="model" className="text-sm font-medium">
-                  Modelo <span className="text-muted-foreground font-normal">(opcional)</span>
+              <div>
+                <Label className="text-sm font-medium">
+                  Modelos <span className="text-muted-foreground font-normal">(opcional)</span>
                 </Label>
-                <Select value={model} onValueChange={setModel}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Todos os modelos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os modelos</SelectItem>
-                    {MODELS.map((m) => (
-                      <SelectItem key={m} value={m}>
-                        {m}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <MultiSelect
+                  options={[...MODELS]}
+                  selected={selectedModels}
+                  onChange={setSelectedModels}
+                  placeholder="Todos os modelos"
+                  className="mt-1"
+                />
               </div>
-              <Button
-                onClick={handleSearch}
-                disabled={isLoading || !date}
-                className="flex items-center gap-2"
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Search className="h-4 w-4" />
-                )}
-                Buscar
-              </Button>
+              <div>
+                <Label className="text-sm font-medium">
+                  Paradas <span className="text-muted-foreground font-normal">(opcional)</span>
+                </Label>
+                <MultiSelect
+                  options={[...STOP_TYPES]}
+                  selected={selectedStops}
+                  onChange={setSelectedStops}
+                  placeholder="Todas as paradas"
+                  className="mt-1"
+                />
+              </div>
+              <div className="flex items-end">
+                <Button
+                  onClick={handleSearch}
+                  disabled={isLoading || !date}
+                  className="flex items-center gap-2 w-full"
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Search className="h-4 w-4" />
+                  )}
+                  Buscar
+                </Button>
+              </div>
             </div>
             {error && (
               <p className="mt-2 text-sm text-destructive">{error}</p>
@@ -302,7 +306,7 @@ export function RelatorioDiarioView() {
               <div>
                 <CardTitle className="text-base">
                   Testes do dia {new Date(data.date).toLocaleDateString("pt-BR")}
-                  {model && model !== "all" && ` - Modelo ${model}`}
+                  {selectedModels.length > 0 && selectedModels.length < MODELS.length && ` - ${selectedModels.join(", ")}`}
                 </CardTitle>
                 <CardDescription>
                   {data.total_tests} teste(s) encontrado(s)
