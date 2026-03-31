@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const date = searchParams.get("date")
     const models = searchParams.get("models")
-    const stops = searchParams.get("stops")
+    const stopsFilter = searchParams.get("stops")
 
     if (!date) {
       return NextResponse.json(
@@ -41,8 +41,8 @@ export async function GET(request: NextRequest) {
     }
     
     // Filtro por paradas - buscar apenas testes que têm as paradas selecionadas
-    if (stops) {
-      const stopList = stops.split(",").map(s => `'${s.trim()}'`).join(",")
+    if (stopsFilter) {
+      const stopList = stopsFilter.split(",").map(s => `'${s.trim()}'`).join(",")
       query += ` AND t.id IN (SELECT DISTINCT test_id FROM stops WHERE stop_type IN (${stopList}))`
     }
     
