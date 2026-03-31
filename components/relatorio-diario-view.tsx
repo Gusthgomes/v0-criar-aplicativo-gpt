@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Search, Loader2, FileText } from "lucide-react"
+import { Search, Loader2, FileText, Calendar } from "lucide-react"
 import { formatDuration, MODELS, STOP_TYPES } from "@/lib/constants"
 import { MultiSelect } from "@/components/ui/multi-select"
 
