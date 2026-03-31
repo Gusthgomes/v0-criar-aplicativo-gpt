@@ -298,23 +298,23 @@ export function RelatorioDiarioView() {
                 </p>
               ) : (
                 <div className="overflow-x-auto">
-                  <Table>
+                  <Table className="min-w-[1000px]">
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Obra</TableHead>
-                        <TableHead>Modelo</TableHead>
-                        <TableHead>Banca</TableHead>
-                        <TableHead>8ID</TableHead>
-                        <TableHead>Tempo</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Paradas</TableHead>
-                        <TableHead>Cod. Material</TableHead>
-                        <TableHead>Observacoes</TableHead>
+                        <TableHead className="w-[80px]">Obra</TableHead>
+                        <TableHead className="w-[60px]">Modelo</TableHead>
+                        <TableHead className="w-[50px]">Banca</TableHead>
+                        <TableHead className="w-[80px]">8ID</TableHead>
+                        <TableHead className="w-[80px]">Tempo</TableHead>
+                        <TableHead className="w-[80px]">Status</TableHead>
+                        <TableHead className="w-[200px]">Paradas</TableHead>
+                        <TableHead className="w-[120px]">Cod. Material</TableHead>
+                        <TableHead className="w-[200px]">Observacoes</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {data.tests.map((test) => (
-                        <TableRow key={test.id}>
+                        <TableRow key={test.id} className="align-top">
                           <TableCell className="font-medium">
                             {test.work_number}
                           </TableCell>
@@ -322,7 +322,7 @@ export function RelatorioDiarioView() {
                           <TableCell>{test.bench}</TableCell>
                           <TableCell>{test.employee_id}</TableCell>
                           <TableCell>
-                            <div className="text-xs">
+                            <div className="text-xs whitespace-nowrap">
                               <div>Est: {formatDuration(test.expected_duration_minutes)}</div>
                               {test.actual_duration_minutes && (
                                 <div>Real: {formatDuration(test.actual_duration_minutes)}</div>
@@ -330,14 +330,32 @@ export function RelatorioDiarioView() {
                             </div>
                           </TableCell>
                           <TableCell>{getStatusBadge(test)}</TableCell>
-                          <TableCell className="max-w-[200px]">
-                            <span className="text-xs">{formatStops(test.stops)}</span>
+                          <TableCell className="w-[200px]">
+                            <div className="text-xs space-y-1">
+                              {test.stops.length > 0 ? test.stops.map((stop, idx) => (
+                                <div key={idx} className="bg-muted/50 rounded px-1.5 py-0.5">
+                                  {stop.stop_type}{stop.sub_type ? ` > ${stop.sub_type}` : ""}
+                                </div>
+                              )) : <span className="text-muted-foreground">-</span>}
+                            </div>
                           </TableCell>
-                          <TableCell className="max-w-[120px]">
-                            <span className="text-xs">{formatMaterialCodes(test.stops)}</span>
+                          <TableCell className="w-[120px]">
+                            <div className="text-xs space-y-1">
+                              {test.stops.filter(s => s.material_code).length > 0 
+                                ? test.stops.filter(s => s.material_code).map((stop, idx) => (
+                                  <div key={idx} className="font-mono">{stop.material_code}</div>
+                                )) 
+                                : <span className="text-muted-foreground">-</span>}
+                            </div>
                           </TableCell>
-                          <TableCell className="max-w-[200px]">
-                            <span className="text-xs">{formatObservations(test.stops)}</span>
+                          <TableCell className="w-[200px]">
+                            <div className="text-xs space-y-1">
+                              {test.stops.filter(s => s.observations).length > 0 
+                                ? test.stops.filter(s => s.observations).map((stop, idx) => (
+                                  <div key={idx} className="text-muted-foreground">{stop.observations}</div>
+                                )) 
+                                : <span className="text-muted-foreground">-</span>}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
