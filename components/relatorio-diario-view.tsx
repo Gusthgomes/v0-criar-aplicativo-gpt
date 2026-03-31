@@ -16,7 +16,14 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Search, Loader2, FileText, Calendar } from "lucide-react"
-import { formatDuration } from "@/lib/constants"
+import { formatDuration, MODELS } from "@/lib/constants"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface Stop {
   id: number
@@ -51,6 +58,7 @@ interface ReportData {
 
 export function RelatorioDiarioView() {
   const [date, setDate] = useState("")
+  const [model, setModel] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [data, setData] = useState<ReportData | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -66,7 +74,9 @@ export function RelatorioDiarioView() {
     setData(null)
 
     try {
-      const response = await fetch(`/api/relatorio-diario?date=${date}`)
+      let url = `/api/relatorio-diario?date=${date}`
+      if (model && model !== "all") url += `&model=${model}`
+      const response = await fetch(url)
       if (!response.ok) throw new Error("Erro ao buscar dados")
       const result = await response.json()
       setData(result)
@@ -248,6 +258,24 @@ export function RelatorioDiarioView() {
                   className="mt-1"
                 />
               </div>
+              <div className="flex-1">
+                <Label htmlFor="model" className="text-sm font-medium">
+                  Modelo <span className="text-muted-foreground font-normal">(opcional)</span>
+                </Label>
+                <Select value={model} onValueChange={setModel}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Todos os modelos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os modelos</SelectItem>
+                    {MODELS.map((m) => (
+                      <SelectItem key={m} value={m}>
+                        {m}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <Button
                 onClick={handleSearch}
                 disabled={isLoading || !date}
@@ -274,6 +302,7 @@ export function RelatorioDiarioView() {
               <div>
                 <CardTitle className="text-base">
                   Testes do dia {new Date(data.date).toLocaleDateString("pt-BR")}
+                  {model && model !== "all" && ` - Modelo ${model}`}
                 </CardTitle>
                 <CardDescription>
                   {data.total_tests} teste(s) encontrado(s)

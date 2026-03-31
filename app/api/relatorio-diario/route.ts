@@ -6,6 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const date = searchParams.get("date")
+    const model = searchParams.get("model")
 
     if (!date) {
       return NextResponse.json(
@@ -14,8 +15,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Buscar testes da data especificada
-    const tests = await sql`
+    // Construir query com filtro opcional de modelo
+    let query = `
       SELECT 
         t.id,
         t.work_number,
@@ -28,10 +29,18 @@ export async function GET(request: NextRequest) {
         t.is_complete,
         t.created_at
       FROM tests t
-      WHERE DATE(t.created_at) = ${date}::date
-         OR DATE(t.finished_at) = ${date}::date
-      ORDER BY t.created_at ASC
+      WHERE (DATE(t.created_at) = '${date}'::date
+         OR DATE(t.finished_at) = '${date}'::date)
     `
+    
+    if (model) {
+      query += ` AND t.model = '${model}'`
+    }
+    
+    query += ` ORDER BY t.created_at ASC`
+
+    // Buscar testes da data especificada
+    const tests = await sql(query)
 
     if (tests.length === 0) {
       return NextResponse.json({
