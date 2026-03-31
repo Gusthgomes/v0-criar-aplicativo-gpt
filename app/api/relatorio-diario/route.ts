@@ -6,7 +6,8 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const date = searchParams.get("date")
-    const model = searchParams.get("model")
+    const models = searchParams.get("models")
+    const stops = searchParams.get("stops")
 
     if (!date) {
       return NextResponse.json(
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Construir query com filtro opcional de modelo
+    // Construir query com filtros
     let query = `
       SELECT 
         t.id,
@@ -33,8 +34,16 @@ export async function GET(request: NextRequest) {
          OR DATE(t.finished_at) = '${date}'::date)
     `
     
-    if (model) {
-      query += ` AND t.model = '${model}'`
+    // Filtro de múltiplos modelos
+    if (models) {
+      const modelList = models.split(",").map(m => `'${m.trim()}'`).join(",")
+      query += ` AND t.model IN (${modelList})`
+    }
+    
+    // Filtro por paradas - buscar apenas testes que têm as paradas selecionadas
+    if (stops) {
+      const stopList = stops.split(",").map(s => `'${s.trim()}'`).join(",")
+      query += ` AND t.id IN (SELECT DISTINCT test_id FROM stops WHERE stop_type IN (${stopList}))`
     }
     
     query += ` ORDER BY t.created_at ASC`
