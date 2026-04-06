@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { formatDuration } from "@/lib/constants"
+import { BenchTimeline } from "./bench-timeline"
 
 interface ActiveTest {
   id: number
@@ -347,6 +348,11 @@ export function AcompanhamentoView() {
           ))}
         </div>
       )}
+
+      {/* Timeline por Banca */}
+      <div className="mt-8 pt-8 border-t">
+        <BenchTimeline />
+      </div>
     </div>
   )
 }
