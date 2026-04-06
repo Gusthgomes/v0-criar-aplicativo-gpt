@@ -24,6 +24,7 @@ interface ActiveTest {
   bench: number
   employee_id: string
   expected_duration_minutes: number
+  total_elapsed_minutes: number
   elapsed_minutes: number
   percent_complete: number
   urgency: "ok" | "warning" | "danger"
@@ -261,23 +262,43 @@ export function AcompanhamentoView() {
               </CardHeader>
               
               <CardContent className="space-y-4">
-                {/* Timer grande */}
+                {/* Timer grande - Tempo Total */}
                 <div className="text-center">
+                  <p className="text-xs text-muted-foreground mb-1">Tempo Total</p>
                   <div className={cn(
                     "text-3xl font-mono font-bold",
-                    test.is_paused ? "text-muted-foreground" : 
-                    test.urgency === "danger" ? "text-red-500" :
-                    test.urgency === "warning" ? "text-yellow-600" : "text-foreground"
+                    test.is_paused ? "text-muted-foreground" : "text-foreground"
                   )}>
                     <Timer className="inline h-6 w-6 mr-2" />
+                    {test.is_paused 
+                      ? formatDuration(test.total_elapsed_minutes)
+                      : formatElapsedTime(test.total_elapsed_minutes)
+                    }
+                  </div>
+                </div>
+                
+                {/* Tempo Efetivo de Teste */}
+                <div className={cn(
+                  "text-center p-2 rounded-lg",
+                  test.is_paused ? "bg-muted" :
+                  test.urgency === "danger" ? "bg-red-500/10" :
+                  test.urgency === "warning" ? "bg-yellow-500/10" : "bg-green-500/10"
+                )}>
+                  <p className="text-xs text-muted-foreground">Tempo Efetivo de Teste</p>
+                  <div className={cn(
+                    "text-xl font-mono font-bold",
+                    test.is_paused ? "text-muted-foreground" : 
+                    test.urgency === "danger" ? "text-red-500" :
+                    test.urgency === "warning" ? "text-yellow-600" : "text-green-600"
+                  )}>
                     {test.is_paused 
                       ? formatDuration(test.elapsed_minutes)
                       : formatElapsedTime(test.elapsed_minutes)
                     }
+                    <span className="text-sm font-normal text-muted-foreground ml-1">
+                      / {formatDuration(test.expected_duration_minutes)}
+                    </span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    de {formatDuration(test.expected_duration_minutes)} estimado
-                  </p>
                 </div>
 
                 {/* Barra de progresso */}
