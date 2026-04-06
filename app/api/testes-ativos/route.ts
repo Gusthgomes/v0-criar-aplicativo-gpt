@@ -51,7 +51,9 @@ export async function GET() {
         const startTime = new Date(test.created_at)
         const elapsedMs = now.getTime() - startTime.getTime()
         const elapsedMinutes = Math.floor(elapsedMs / 60000)
-        const effectiveElapsed = elapsedMinutes - (test.total_stop_duration || 0)
+        const effectiveElapsed = Math.max(0, elapsedMinutes - (test.total_stop_duration || 0))
+        
+        console.log(`[v0] Test ${test.work_number}: created_at=${test.created_at}, startTime=${startTime.toISOString()}, now=${now.toISOString()}, elapsedMs=${elapsedMs}, elapsedMinutes=${elapsedMinutes}, stopDuration=${test.total_stop_duration}, effectiveElapsed=${effectiveElapsed}`)
         
         const expectedMinutes = test.expected_duration_minutes
         const percentComplete = Math.min((effectiveElapsed / expectedMinutes) * 100, 150)
