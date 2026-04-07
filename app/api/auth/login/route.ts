@@ -59,13 +59,15 @@ export async function POST(request: NextRequest) {
     })
 
     // Definir cookie na resposta
+    console.log("[v0] Setting auth-token cookie, token length:", token.length)
     response.cookies.set("auth-token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      secure: true,
+      sameSite: "none",
       maxAge: 60 * 60 * 24 * 7, // 7 dias
       path: "/",
     })
+    console.log("[v0] Cookie set on response")
 
     return response
   } catch (error) {
