@@ -34,15 +34,19 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  const token = request.cookies.get("auth-token")?.value
+  console.log(`[v0] Middleware: pathname=${pathname}, hasToken=${!!token}`)
+
   // Páginas públicas
   if (PUBLIC_PATHS.includes(pathname)) {
     // Se já está logado, redirecionar para home
-    const token = request.cookies.get("auth-token")?.value
     if (token) {
       try {
-        await jwtVerify(token, JWT_SECRET)
+        const { payload } = await jwtVerify(token, JWT_SECRET)
+        console.log(`[v0] Token válido na página pública, role=${payload.role}, redirecionando para /`)
         return NextResponse.redirect(new URL("/", request.url))
-      } catch {
+      } catch (error) {
+        console.log(`[v0] Token inválido na página pública:`, error)
         // Token inválido, deixar acessar página de login
       }
     }
@@ -50,9 +54,8 @@ export async function middleware(request: NextRequest) {
   }
 
   // Verificar autenticação
-  const token = request.cookies.get("auth-token")?.value
-
   if (!token) {
+    console.log(`[v0] Sem token, redirecionando para /login`)
     return NextResponse.redirect(new URL("/login", request.url))
   }
 
