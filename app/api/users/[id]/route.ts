@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { sql } from "@/lib/db"
-import { getSession, type UserRole } from "@/lib/auth"
+import { getSession } from "@/lib/auth"
+import { type UserRole } from "@/lib/auth-constants"
 
 const VALID_ROLES: UserRole[] = ["visitor", "inspectors", "admin", "quality", "master"]
 
