@@ -1,5 +1,6 @@
 "use client"
 
+// Auth Context - Gerenciamento de autenticação
 import { createContext, useContext, useEffect, useState, ReactNode } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { type UserRole, PAGE_PERMISSIONS } from "@/lib/auth-constants"
