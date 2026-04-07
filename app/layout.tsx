@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Toaster } from '@/components/ui/sonner'
+import { AuthProvider } from '@/contexts/auth-context'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -41,8 +42,10 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className="font-sans antialiased">
-        {children}
-        <Toaster richColors position="top-center" />
+        <AuthProvider>
+          {children}
+          <Toaster richColors position="top-center" />
+        </AuthProvider>
       </body>
     </html>
   )
