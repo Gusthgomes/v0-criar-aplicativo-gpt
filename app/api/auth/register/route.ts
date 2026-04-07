@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { sql } from "@/lib/db"
 import { hashPassword, createToken } from "@/lib/auth"
-import { cookies } from "next/headers"
 
 export async function POST(request: NextRequest) {
   try {
@@ -54,17 +53,8 @@ export async function POST(request: NextRequest) {
       role: user.role,
     })
 
-    // Definir cookie
-    const cookieStore = await cookies()
-    cookieStore.set("auth-token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 dias
-      path: "/",
-    })
-
-    return NextResponse.json({
+    // Criar resposta com cookie
+    const response = NextResponse.json({
       user: {
         id: user.id,
         email: user.email,
@@ -72,6 +62,17 @@ export async function POST(request: NextRequest) {
         role: user.role,
       },
     })
+
+    // Definir cookie na resposta
+    response.cookies.set("auth-token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7, // 7 dias
+      path: "/",
+    })
+
+    return response
   } catch (error) {
     console.error("Erro no registro:", error)
     return NextResponse.json(
