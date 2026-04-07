@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,7 +17,6 @@ export default function RegistroPage() {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const { register } = useAuth()
-  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,12 +37,12 @@ export default function RegistroPage() {
     const result = await register(email, password, name)
 
     if (result.success) {
-      router.push("/")
+      // Usar window.location para garantir reload completo com novo cookie
+      window.location.href = "/"
     } else {
       setError(result.error || "Erro ao criar conta")
+      setIsLoading(false)
     }
-
-    setIsLoading(false)
   }
 
   return (
