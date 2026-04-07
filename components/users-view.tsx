@@ -33,7 +33,7 @@ import {
 import { Loader2, Trash2, Users, Shield, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { AppHeader } from "./app-header"
-import { type UserRole } from "@/lib/auth"
+import { type UserRole } from "@/lib/auth-constants"
 
 interface User {
   id: number

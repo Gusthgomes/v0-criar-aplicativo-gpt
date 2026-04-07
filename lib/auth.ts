@@ -4,7 +4,8 @@ import { cookies } from "next/headers"
 import bcrypt from "bcryptjs"
 import { type UserRole, PAGE_PERMISSIONS } from "./auth-constants"
 
-export { type UserRole, PAGE_PERMISSIONS }
+export type { UserRole }
+export { PAGE_PERMISSIONS }
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "your-secret-key-change-in-production"
