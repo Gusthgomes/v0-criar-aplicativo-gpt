@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server"
-import { cookies } from "next/headers"
 
 export async function POST() {
   try {
-    const cookieStore = await cookies()
-    cookieStore.delete("auth-token")
+    const response = NextResponse.json({ success: true })
+    
+    // Deletar cookie setando maxAge para 0
+    response.cookies.set("auth-token", "", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: 0,
+      path: "/",
+    })
 
-    return NextResponse.json({ success: true })
+    return response
   } catch (error) {
     console.error("Erro no logout:", error)
     return NextResponse.json(

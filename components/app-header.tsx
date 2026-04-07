@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ExportDialog } from "@/components/export-dialog"
 import { 
@@ -14,39 +15,39 @@ import {
   Activity, 
   LogOut,
   Users,
-  User
+  User,
+  Menu,
+  X
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
+import { Separator } from "@/components/ui/separator"
 
 // Configuração de navegação com permissões
 const NAV_ITEMS = [
-  { path: "/", label: "Novo Teste", icon: null, roles: ["inspectors", "admin", "quality", "master"] },
+  { path: "/", label: "Novo Teste", icon: ClipboardList, roles: ["inspectors", "admin", "quality", "master"] },
   { path: "/consulta", label: "Consulta", icon: Search, roles: ["inspectors", "admin", "quality", "master"] },
-  { path: "/relatorio", label: "Relatorio", icon: FileSpreadsheet, roles: ["admin", "quality", "master"] },
+  { path: "/relatorio", label: "Relatório", icon: FileSpreadsheet, roles: ["admin", "quality", "master"] },
   { path: "/comparativo", label: "Comparativo", icon: TrendingUp, roles: ["admin", "master"] },
   { path: "/acompanhamento", label: "Tempo Real", icon: Activity, roles: ["admin", "quality", "master"] },
-  { path: "/dashboard", label: "Dashboard", icon: BarChart3, roles: ["admin", "quality", "master"], variant: "outline" as const },
-  { path: "/assistente", label: "Assistente", icon: Sparkles, roles: ["admin", "master"], variant: "default" as const },
-  { path: "/usuarios", label: "Usuarios", icon: Users, roles: ["master"] },
+  { path: "/dashboard", label: "Dashboard", icon: BarChart3, roles: ["admin", "quality", "master"] },
+  { path: "/assistente", label: "Assistente", icon: Sparkles, roles: ["admin", "master"] },
+  { path: "/usuarios", label: "Usuários", icon: Users, roles: ["master"] },
 ]
 
 export function AppHeader() {
   const pathname = usePathname()
   const { user, logout, hasPermission } = useAuth()
+  const [isOpen, setIsOpen] = useState(false)
 
   // Filtrar itens de navegação baseado nas permissões
-  const visibleNavItems = NAV_ITEMS.filter(item => {
-    if (pathname === item.path) return false
-    return hasPermission(item.path)
-  })
+  const visibleNavItems = NAV_ITEMS.filter(item => hasPermission(item.path))
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
@@ -69,14 +70,20 @@ export function AppHeader() {
     }
   }
 
+  const handleLogout = async () => {
+    setIsOpen(false)
+    await logout()
+  }
+
   return (
-    <header className="border-b border-border bg-card">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
+    <header className="border-b border-border bg-card sticky top-0 z-50">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+        {/* Logo */}
         <Link href="/" className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
             <ClipboardList className="h-5 w-5 text-primary-foreground" />
           </div>
-          <div>
+          <div className="hidden sm:block">
             <h1 className="text-lg font-bold leading-tight text-foreground">
               GPT V01
             </h1>
@@ -85,54 +92,108 @@ export function AppHeader() {
             </p>
           </div>
         </Link>
-        <nav className="flex items-center gap-2">
-          {visibleNavItems.map(item => (
+
+        {/* Desktop Navigation - apenas alguns itens principais */}
+        <nav className="hidden lg:flex items-center gap-1">
+          {visibleNavItems.slice(0, 4).map(item => (
             <Button 
               key={item.path} 
-              variant={item.variant || "ghost"} 
+              variant={pathname === item.path ? "secondary" : "ghost"}
               size="sm" 
               asChild
             >
               <Link href={item.path} className="flex items-center gap-2">
-                {item.icon && <item.icon className="h-4 w-4" />}
-                <span className="hidden sm:inline">{item.label}</span>
+                <item.icon className="h-4 w-4" />
+                <span>{item.label}</span>
               </Link>
             </Button>
           ))}
-          
-          {/* Exportar - apenas para quality e master */}
-          {(hasPermission("/exportar") || user?.role === "quality" || user?.role === "master") && (
-            <ExportDialog />
+        </nav>
+
+        {/* Right side - Export, User menu e Sheet */}
+        <div className="flex items-center gap-2">
+          {/* Exportar - desktop */}
+          {(user?.role === "quality" || user?.role === "master") && (
+            <div className="hidden lg:block">
+              <ExportDialog />
+            </div>
           )}
 
-          {/* Menu do usuário */}
+          {/* Sheet Menu */}
           {user && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="ml-2">
-                  <User className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline max-w-24 truncate">{user.name}</span>
+            <Sheet open={isOpen} onOpenChange={setIsOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                  <Menu className="h-4 w-4" />
+                  <span className="hidden sm:inline">Menu</span>
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>
-                  <div className="flex flex-col gap-1">
-                    <span className="font-medium">{user.name}</span>
-                    <span className="text-xs text-muted-foreground">{user.email}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full w-fit mt-1 ${getRoleBadgeColor(user.role)}`}>
-                      {getRoleLabel(user.role)}
-                    </span>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout} className="text-red-600 dark:text-red-400">
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sair
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </SheetTrigger>
+              <SheetContent className="w-80">
+                <SheetHeader>
+                  <SheetTitle className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                      <User className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium">{user.name}</span>
+                      <span className="text-xs text-muted-foreground">{user.email}</span>
+                    </div>
+                  </SheetTitle>
+                </SheetHeader>
+
+                <div className="mt-2">
+                  <span className={`text-xs px-2 py-1 rounded-full ${getRoleBadgeColor(user.role)}`}>
+                    {getRoleLabel(user.role)}
+                  </span>
+                </div>
+
+                <Separator className="my-4" />
+
+                {/* Navegação */}
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground mb-2 px-2">Navegação</p>
+                  {visibleNavItems.map(item => (
+                    <Button
+                      key={item.path}
+                      variant={pathname === item.path ? "secondary" : "ghost"}
+                      className="w-full justify-start"
+                      asChild
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <Link href={item.path} className="flex items-center gap-3">
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.label}</span>
+                      </Link>
+                    </Button>
+                  ))}
+                </div>
+
+                {/* Exportar - dentro do Sheet */}
+                {(user.role === "quality" || user.role === "master") && (
+                  <>
+                    <Separator className="my-4" />
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground mb-2 px-2">Exportação</p>
+                      <ExportDialog />
+                    </div>
+                  </>
+                )}
+
+                <Separator className="my-4" />
+
+                {/* Logout */}
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="h-4 w-4 mr-3" />
+                  Sair da conta
+                </Button>
+              </SheetContent>
+            </Sheet>
           )}
-        </nav>
+        </div>
       </div>
     </header>
   )
