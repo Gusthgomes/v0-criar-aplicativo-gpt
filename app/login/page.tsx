@@ -41,7 +41,7 @@ export default function LoginPage() {
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary">
             <ClipboardCheck className="h-6 w-6 text-primary-foreground" />
           </div>
-          <CardTitle className="text-2xl">Teste de Bancada</CardTitle>
+          <CardTitle className="text-2xl">GPT</CardTitle>
           <CardDescription>Entre com suas credenciais para acessar</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
@@ -63,7 +63,7 @@ export default function LoginPage() {
                 disabled={isLoading}
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 my-5">
               <Label htmlFor="password">Senha</Label>
               <Input
                 id="password"
