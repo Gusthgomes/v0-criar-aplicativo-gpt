@@ -49,6 +49,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await fetch("/api/auth/session")
       const data = await response.json()
       setUser(data.user)
+      
+      // Se a role foi atualizada no banco, recarregar a página para aplicar
+      if (data.roleUpdated) {
+        window.location.reload()
+      }
     } catch (error) {
       console.error("Erro ao carregar sessão:", error)
       setUser(null)
