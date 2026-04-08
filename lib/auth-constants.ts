@@ -9,7 +9,7 @@ export const PAGE_PERMISSIONS: Record<string, UserRole[]> = {
   "/relatorio": ["admin", "quality", "master"],
   "/comparativo": ["admin", "master"],
   "/acompanhamento": ["admin", "quality", "master"],
-  "/dashboard": ["admin", "quality", "master"],
+  "/dashboard": ["inspectors", "admin", "quality", "master"],
   "/assistente": ["admin", "master"],
   "/exportar": ["quality", "master"],
   "/usuarios": ["master"],
