@@ -48,7 +48,7 @@ const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 const ROLES: { value: UserRole; label: string; description: string }[] = [
   { value: "visitor", label: "Visitante", description: "Sem acesso - aguardando permissões" },
-  { value: "inspectors", label: "Inspetor", description: "Novo Teste, Consulta" },
+  { value: "inspectors", label: "Inspetor", description: "Novo Teste, Consulta, Dashboard" },
   { value: "admin", label: "Admin", description: "Consulta, Relatório, Comparativo, Tempo Real, Dashboard, Assistente" },
   { value: "quality", label: "Qualidade", description: "Consulta, Relatório, Tempo Real, Dashboard, Exportar" },
   { value: "master", label: "Master", description: "Acesso total + Gerenciar Usuários" },
@@ -223,9 +223,9 @@ export function UsersView() {
                         <TableCell className="text-right">
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 className="text-red-500 hover:text-red-700"
                                 disabled={deletingId === user.id}
                               >
@@ -240,7 +240,7 @@ export function UsersView() {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Excluir usuário</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Tem certeza que deseja excluir o usuário <strong>{user.name}</strong>? 
+                                  Tem certeza que deseja excluir o usuário <strong>{user.name}</strong>?
                                   Esta ação não pode ser desfeita.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
