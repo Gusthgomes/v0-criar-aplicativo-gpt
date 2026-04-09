@@ -5,14 +5,14 @@ import { usePathname } from "next/navigation"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ExportDialog } from "@/components/export-dialog"
-import { 
-  BarChart3, 
-  ClipboardList, 
-  Search, 
-  Sparkles, 
-  FileSpreadsheet, 
-  TrendingUp, 
-  Activity, 
+import {
+  BarChart3,
+  ClipboardList,
+  Search,
+  Sparkles,
+  FileSpreadsheet,
+  TrendingUp,
+  Activity,
   LogOut,
   Users,
   User,
@@ -34,9 +34,9 @@ const NAV_ITEMS = [
   { path: "/", label: "Novo Teste", icon: ClipboardList, roles: ["inspectors", "admin", "quality", "master"] },
   { path: "/consulta", label: "Consulta", icon: Search, roles: ["inspectors", "admin", "quality", "master"] },
   { path: "/relatorio", label: "Relatório", icon: FileSpreadsheet, roles: ["admin", "quality", "master"] },
+  { path: "/dashboard", label: "Dashboard", icon: BarChart3, roles: ["admin", "quality", "master"] },
   { path: "/comparativo", label: "Comparativo", icon: TrendingUp, roles: ["admin", "master"] },
   { path: "/acompanhamento", label: "Tempo Real", icon: Activity, roles: ["admin", "quality", "master"] },
-  { path: "/dashboard", label: "Dashboard", icon: BarChart3, roles: ["admin", "quality", "master"] },
   { path: "/assistente", label: "Assistente", icon: Sparkles, roles: ["admin", "master"] },
   { path: "/usuarios", label: "Usuários", icon: Users, roles: ["master"] },
 ]
@@ -96,10 +96,10 @@ export function AppHeader() {
         {/* Desktop Navigation - apenas alguns itens principais */}
         <nav className="hidden lg:flex items-center gap-1">
           {visibleNavItems.slice(0, 4).map(item => (
-            <Button 
-              key={item.path} 
+            <Button
+              key={item.path}
               variant={pathname === item.path ? "secondary" : "ghost"}
-              size="sm" 
+              size="sm"
               asChild
             >
               <Link href={item.path} className="flex items-center gap-2">
@@ -182,8 +182,8 @@ export function AppHeader() {
                 <Separator className="my-4" />
 
                 {/* Logout */}
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
                   onClick={handleLogout}
                 >

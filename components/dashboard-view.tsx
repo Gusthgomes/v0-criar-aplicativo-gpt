@@ -791,7 +791,7 @@ export function DashboardView() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Aprovação no Primeiro Teste: M76</CardTitle>
-            <CardDescription>Aprovadas vs não aprovadas e motivos da n��o aprovação</CardDescription>
+            <CardDescription>Aprovadas vs não aprovadas e motivos da não aprovação</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-6 md:grid-cols-2">
