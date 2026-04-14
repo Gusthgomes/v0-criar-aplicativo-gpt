@@ -21,6 +21,7 @@ const PAGE_PERMISSIONS: Record<string, string[]> = {
   "/exportar": ["quality", "master"],
   "/usuarios": ["master"],
   "/editar-obra": ["master"],
+  "/painel": ["inspectors", "admin", "quality", "master"],
 }
 
 export async function middleware(request: NextRequest) {
