@@ -6,10 +6,27 @@ import useSWR from "swr"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { formatDuration } from "@/lib/constants"
 import { Play, Moon, Loader2, Hash, Wrench, User, Timer } from "lucide-react"
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
+
+interface SelectedTest {
+  id: number
+  employee_id: string
+  work_number: string
+}
 
 export function PendingTests() {
   const router = useRouter()
@@ -17,27 +34,46 @@ export function PendingTests() {
     refreshInterval: 30000,
   })
   const [resumingId, setResumingId] = useState<number | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [selectedTest, setSelectedTest] = useState<SelectedTest | null>(null)
+  const [keepEmployee, setKeepEmployee] = useState<"yes" | "no">("yes")
+  const [newEmployeeId, setNewEmployeeId] = useState("")
 
-  async function handleResume(testId: number) {
+  function handleContinueClick(test: SelectedTest) {
+    setSelectedTest(test)
+    setKeepEmployee("yes")
+    setNewEmployeeId("")
+    setDialogOpen(true)
+  }
+
+  async function handleConfirmResume() {
+    if (!selectedTest) return
+    
+    const testId = selectedTest.id
+    setDialogOpen(false)
     setResumingId(testId)
-    console.log("[v0] Resuming test:", testId)
+    
     try {
+      const body: { employee_id?: string } = {}
+      if (keepEmployee === "no" && newEmployeeId.trim()) {
+        body.employee_id = newEmployeeId.trim()
+      }
+      
       const res = await fetch(`/api/tests/${testId}/resume`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       })
-      console.log("[v0] Resume response status:", res.status)
 
       const data = await res.json()
-      console.log("[v0] Resume response data:", data)
 
       if (!res.ok) {
         throw new Error(data.error || "Erro ao retomar teste")
       }
 
-      console.log("[v0] Redirecting to /test/" + testId)
       router.push(`/test/${testId}`)
     } catch (err) {
-      console.error("[v0] Error resuming test:", err)
+      console.error("Error resuming test:", err)
       setResumingId(null)
     }
   }
@@ -117,7 +153,11 @@ export function PendingTests() {
               </div>
               <Button
                 size="sm"
-                onClick={() => handleResume(test.id)}
+                onClick={() => handleContinueClick({ 
+                  id: test.id, 
+                  employee_id: test.employee_id,
+                  work_number: test.work_number 
+                })}
                 disabled={resumingId === test.id}
                 className="shrink-0 gap-1.5"
               >
@@ -132,6 +172,64 @@ export function PendingTests() {
           )
         )}
       </CardContent>
+
+      {/* Dialog para confirmar 8ID */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Continuar Teste</DialogTitle>
+            <DialogDescription>
+              Obra: <strong>{selectedTest?.work_number}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Quem vai continuar o teste?</Label>
+              <RadioGroup value={keepEmployee} onValueChange={(v) => setKeepEmployee(v as "yes" | "no")}>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="yes" id="keep-yes" />
+                  <Label htmlFor="keep-yes" className="font-normal">
+                    Manter o 8ID atual ({selectedTest?.employee_id})
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="no" id="keep-no" />
+                  <Label htmlFor="keep-no" className="font-normal">
+                    Alterar para outro operador
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+            
+            {keepEmployee === "no" && (
+              <div className="space-y-2">
+                <Label htmlFor="new-employee">Novo 8ID</Label>
+                <Input
+                  id="new-employee"
+                  placeholder="Digite o 8ID do novo operador"
+                  value={newEmployeeId}
+                  onChange={(e) => setNewEmployeeId(e.target.value)}
+                  autoFocus
+                />
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleConfirmResume}
+              disabled={keepEmployee === "no" && !newEmployeeId.trim()}
+            >
+              <Play className="h-4 w-4 mr-2" />
+              Continuar Teste
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }

@@ -1,13 +1,22 @@
 import { sql } from "@/lib/db"
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 
 export async function POST(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
     const testId = Number(id)
+    
+    // Verificar se tem um novo employee_id no body
+    let newEmployeeId: string | null = null
+    try {
+      const body = await request.json()
+      newEmployeeId = body.employee_id || null
+    } catch {
+      // Sem body ou body inválido, continua sem alterar employee_id
+    }
 
     if (isNaN(testId)) {
       return NextResponse.json(
@@ -46,14 +55,24 @@ export async function POST(
       )
     }
 
-    // Retomar o teste: apenas marca que está sendo retomado
+    // Retomar o teste: marca que está sendo retomado e atualiza employee_id se necessário
     // O elapsed_seconds_at_pause será usado pelo timer para saber de onde continuar
-    const result = await sql`
-      UPDATE tests 
-      SET is_complete = NULL
-      WHERE id = ${testId}
-      RETURNING *
-    `
+    let result
+    if (newEmployeeId) {
+      result = await sql`
+        UPDATE tests 
+        SET is_complete = NULL, employee_id = ${newEmployeeId}
+        WHERE id = ${testId}
+        RETURNING *
+      `
+    } else {
+      result = await sql`
+        UPDATE tests 
+        SET is_complete = NULL
+        WHERE id = ${testId}
+        RETURNING *
+      `
+    }
 
     return NextResponse.json(result[0])
   } catch (error) {
