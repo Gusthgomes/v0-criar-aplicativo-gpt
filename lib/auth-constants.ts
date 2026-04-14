@@ -13,4 +13,5 @@ export const PAGE_PERMISSIONS: Record<string, UserRole[]> = {
   "/assistente": ["admin", "master"],
   "/exportar": ["quality", "master"],
   "/usuarios": ["master"],
+  "/editar-obra": ["master"],
 }

@@ -17,7 +17,7 @@ import {
   Users,
   User,
   Menu,
-  X
+  Wrench
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import {
@@ -39,6 +39,7 @@ const NAV_ITEMS = [
   { path: "/acompanhamento", label: "Tempo Real", icon: Activity, roles: ["admin", "quality", "master"] },
   { path: "/assistente", label: "Assistente", icon: Sparkles, roles: ["admin", "master"] },
   { path: "/usuarios", label: "Usuários", icon: Users, roles: ["master"] },
+  { path: "/editar-obra", label: "Editar Obra", icon: Wrench, roles: ["master"] },
 ]
 
 export function AppHeader() {
