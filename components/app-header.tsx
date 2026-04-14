@@ -131,8 +131,8 @@ export function AppHeader() {
               </SheetTrigger>
               <SheetContent className="w-80">
                 <SheetHeader>
-                  <SheetTitle className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                  <SheetTitle className="flex items-center gap-3 text-center">
+                    <div className="flex h-10 w-10 items-center justify-center text-center rounded-full bg-primary/10">
                       <User className="h-5 w-5 text-primary" />
                     </div>
                     <div className="flex flex-col items-start">
@@ -142,7 +142,7 @@ export function AppHeader() {
                   </SheetTitle>
                 </SheetHeader>
 
-                <div className="mt-2">
+                <div className="mt-2 w-full flex justify-center items-center">
                   <span className={`text-xs px-2 py-1 rounded-full ${getRoleBadgeColor(user.role)}`}>
                     {getRoleLabel(user.role)}
                   </span>
@@ -151,7 +151,7 @@ export function AppHeader() {
                 <Separator className="my-4" />
 
                 {/* Navegação */}
-                <div className="space-y-1">
+                <div className="space-y-1 justify-center items-center w-full px-auto">
                   <p className="text-xs font-medium text-muted-foreground mb-2 px-2">Navegação</p>
                   {visibleNavItems.map(item => (
                     <Button
@@ -173,7 +173,7 @@ export function AppHeader() {
                 {(user.role === "quality" || user.role === "master") && (
                   <>
                     <Separator className="my-4" />
-                    <div className="space-y-1">
+                    <div className="space-y-1 w-full justify-center items-center pl-4">
                       <p className="text-xs font-medium text-muted-foreground mb-2 px-2">Exportação</p>
                       <ExportDialog />
                     </div>
