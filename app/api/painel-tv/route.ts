@@ -22,6 +22,8 @@ export async function GET() {
         COUNT(CASE WHEN is_complete = false THEN 1 END) as paused
       FROM tests
     `
+    console.log("[v0] Painel TV - pendingCounts:", pendingCounts[0])
+    console.log("[v0] Painel TV - activeTests count:", (await sql`SELECT COUNT(*) as c FROM tests WHERE finished_at IS NULL AND is_complete IS NULL`)[0])
 
     // Taxa de aprovação no tempo (finalizados dentro do tempo esperado)
     const approvalRate = await sql`
