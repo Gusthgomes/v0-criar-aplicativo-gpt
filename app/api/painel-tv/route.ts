@@ -10,11 +10,17 @@ export async function GET() {
       SELECT 
         COUNT(*) as total,
         COUNT(CASE WHEN finished_at IS NOT NULL THEN 1 END) as finished,
-        COUNT(CASE WHEN finished_at IS NULL AND is_complete IS NULL THEN 1 END) as in_progress,
-        COUNT(CASE WHEN is_complete = false THEN 1 END) as paused,
         AVG(CASE WHEN actual_duration_minutes IS NOT NULL THEN actual_duration_minutes END) as avg_duration
       FROM tests
       WHERE DATE(created_at) = ${today}::date OR DATE(finished_at) = ${today}::date
+    `
+
+    // Contagem de testes em andamento e pausados (todos, independente da data)
+    const pendingCounts = await sql`
+      SELECT 
+        COUNT(CASE WHEN finished_at IS NULL AND is_complete IS NULL THEN 1 END) as in_progress,
+        COUNT(CASE WHEN is_complete = false THEN 1 END) as paused
+      FROM tests
     `
 
     // Taxa de aprovação no tempo (finalizados dentro do tempo esperado)
@@ -44,7 +50,7 @@ export async function GET() {
       ) t
     `
 
-    // Testes em andamento com detalhes
+    // Testes em andamento com detalhes (TODOS, independente da data)
     const activeTests = await sql`
       SELECT 
         t.id, t.work_number, t.model, t.bench, t.employee_id,
@@ -57,7 +63,7 @@ export async function GET() {
       ORDER BY t.created_at ASC
     `
 
-    // Testes pausados
+    // Testes pausados (TODOS, independente da data)
     const pausedTests = await sql`
       SELECT 
         t.id, t.work_number, t.model, t.bench, t.employee_id,
@@ -116,6 +122,7 @@ export async function GET() {
     `
 
     const stats = testsToday[0]
+    const pending = pendingCounts[0]
     const approval = approvalRate[0]
     const firstTest = firstTestApproval[0]
 
@@ -124,8 +131,8 @@ export async function GET() {
       kpis: {
         totalTests: Number(stats.total) || 0,
         finishedTests: Number(stats.finished) || 0,
-        inProgressTests: Number(stats.in_progress) || 0,
-        pausedTests: Number(stats.paused) || 0,
+        inProgressTests: Number(pending.in_progress) || 0,
+        pausedTests: Number(pending.paused) || 0,
         avgDuration: Math.round(Number(stats.avg_duration) || 0),
         approvalRate: approval.total > 0 
           ? Math.round((Number(approval.approved) / Number(approval.total)) * 100)
