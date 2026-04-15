@@ -4,7 +4,7 @@ import { NextResponse } from "next/server"
 export async function GET() {
   try {
     const today = new Date().toISOString().split("T")[0]
-    
+
     // KPIs do dia
     const testsToday = await sql`
       SELECT 
@@ -18,10 +18,11 @@ export async function GET() {
     // Contagem de testes em andamento e pausados (todos, independente da data)
     const pendingCounts = await sql`
       SELECT 
-        COUNT(CASE WHEN finished_at IS NULL AND is_complete IS NULL THEN 1 END) as in_progress,
-        COUNT(CASE WHEN is_complete = false THEN 1 END) as paused
+        COUNT(CASE WHEN finished_at IS NULL AND (is_complete IS NULL OR is_complete = true) THEN 1 END) as in_progress,
+        COUNT(CASE WHEN finished_at IS NULL AND is_complete = false THEN 1 END) as paused
       FROM tests
     `
+
     console.log("[v0] Painel TV - pendingCounts:", pendingCounts[0])
     console.log("[v0] Painel TV - activeTests count:", (await sql`SELECT COUNT(*) as c FROM tests WHERE finished_at IS NULL AND is_complete IS NULL`)[0])
 
@@ -60,10 +61,11 @@ export async function GET() {
         COALESCE(SUM(s.duration_minutes), 0) as total_stop_duration
       FROM tests t
       LEFT JOIN stops s ON s.test_id = t.id
-      WHERE t.finished_at IS NULL AND t.is_complete IS NULL
+      WHERE t.finished_at IS NULL AND (t.is_complete IS NULL OR t.is_complete = true)
       GROUP BY t.id
       ORDER BY t.created_at ASC
     `
+
 
     // Testes pausados (TODOS, independente da data)
     const pausedTests = await sql`
@@ -71,9 +73,10 @@ export async function GET() {
         t.id, t.work_number, t.model, t.bench, t.employee_id,
         t.expected_duration_minutes, t.created_at
       FROM tests t
-      WHERE t.is_complete = false
+      WHERE t.finished_at IS NULL AND t.is_complete = false
       ORDER BY t.created_at ASC
     `
+
 
     // Últimos testes finalizados
     const recentTests = await sql`
@@ -100,8 +103,8 @@ export async function GET() {
         t.expected_duration_minutes,
         t.actual_duration_minutes,
         CASE 
-          WHEN t.finished_at IS NULL AND t.is_complete IS NULL THEN 'in_progress'
-          WHEN t.is_complete = false THEN 'paused'
+          WHEN t.finished_at IS NULL AND (t.is_complete IS NULL OR t.is_complete = true) THEN 'in_progress'
+          WHEN t.finished_at IS NULL AND t.is_complete = false THEN 'paused'
           WHEN t.actual_duration_minutes <= t.expected_duration_minutes THEN 'on_time'
           ELSE 'exceeded'
         END as status
@@ -109,6 +112,7 @@ export async function GET() {
       WHERE DATE(t.created_at) = ${today}::date OR DATE(t.finished_at) = ${today}::date
       ORDER BY t.bench, t.created_at ASC
     `
+
 
     // Produtividade por modelo
     const productivityByModel = await sql`
@@ -136,7 +140,7 @@ export async function GET() {
         inProgressTests: Number(pending.in_progress) || 0,
         pausedTests: Number(pending.paused) || 0,
         avgDuration: Math.round(Number(stats.avg_duration) || 0),
-        approvalRate: approval.total > 0 
+        approvalRate: approval.total > 0
           ? Math.round((Number(approval.approved) / Number(approval.total)) * 100)
           : 0,
         firstTestApprovalRate: firstTest.total > 0
