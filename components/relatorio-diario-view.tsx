@@ -18,6 +18,21 @@ import { Badge } from "@/components/ui/badge"
 import { Search, Loader2, FileText, Calendar } from "lucide-react"
 import { formatDuration, MODELS, STOP_TYPES } from "@/lib/constants"
 import { MultiSelect } from "@/components/ui/multi-select"
+// ✅ ADICIONE APENAS ESTAS LINHAS
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  ComposedChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  CartesianGrid,
+} from 'recharts'
+
 
 interface Stop {
   id: number
@@ -45,22 +60,27 @@ interface Test {
 }
 
 interface ReportData {
-  date: string
+  date_from: string
+  date_to?: string
   total_tests: number
   tests: Test[]
 }
 
 export function RelatorioDiarioView() {
-  const [date, setDate] = useState("")
+
+  const [dateFrom, setDateFrom] = useState("")
+  const [dateTo, setDateTo] = useState("")
   const [selectedModels, setSelectedModels] = useState<string[]>([])
-  const [selectedStops, setSelectedStops] = useState<string[]>([])
+  const [selectedStops, setSelectedStops] = useState<string[]>([]) // ✅ MANTIDO filtro paradas
+
   const [isLoading, setIsLoading] = useState(false)
   const [data, setData] = useState<ReportData | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   async function handleSearch() {
-    if (!date) {
-      setError("Selecione uma data")
+    // Validação: intervalo obrigatório
+    if (!dateFrom) {
+      setError("Selecione pelo menos a data inicial (De)")
       return
     }
 
@@ -69,15 +89,30 @@ export function RelatorioDiarioView() {
     setData(null)
 
     try {
-      let url = `/api/relatorio-diario?date=${date}`
-      if (selectedModels.length > 0) url += `&models=${selectedModels.join(",")}`
-      if (selectedStops.length > 0) url += `&stops=${selectedStops.join(",")}`
+      let url = `/api/relatorio-diario?date_from=${dateFrom}`
+
+      if (dateTo) {
+        url += `&date_to=${dateTo}`
+      }
+
+      if (selectedModels.length > 0) {
+        url += `&models=${selectedModels.join(",")}`
+      }
+
+      // ✅ FILTRO DE PARADAS INCLUÍDO
+      if (selectedStops.length > 0) {
+        url += `&stops=${selectedStops.join(",")}`
+      }
+
       const response = await fetch(url)
-      if (!response.ok) throw new Error("Erro ao buscar dados")
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Erro ao buscar dados")
+      }
       const result = await response.json()
       setData(result)
-    } catch {
-      setError("Erro ao buscar dados. Tente novamente.")
+    } catch (err: any) {
+      setError(err.message || "Erro ao buscar dados. Tente novamente.")
     } finally {
       setIsLoading(false)
     }
@@ -93,42 +128,33 @@ export function RelatorioDiarioView() {
     return <Badge className="bg-green-600 hover:bg-green-700">No tempo</Badge>
   }
 
-  function formatStops(stops: Stop[]) {
-    if (stops.length === 0) return "-"
-    return stops.map(s => {
-      let text = s.stop_type
-      if (s.sub_type) text += ` > ${s.sub_type}`
-      return text
-    }).join("; ")
-  }
-
-  function formatMaterialCodes(stops: Stop[]) {
-    const codes = stops.filter(s => s.material_code).map(s => s.material_code)
-    if (codes.length === 0) return "-"
-    return codes.join(", ")
-  }
-
-  function formatObservations(stops: Stop[]) {
-    const obs = stops.filter(s => s.observations).map(s => s.observations)
-    if (obs.length === 0) return "-"
-    return obs.join("; ")
+  // Título dinâmico do período
+  function getPeriodTitle() {
+    if (data) {
+      if (data.date_to) {
+        return `${new Date(data.date_from).toLocaleDateString("pt-BR")} até ${new Date(data.date_to).toLocaleDateString("pt-BR")}`
+      }
+      return `a partir de ${new Date(data.date_from).toLocaleDateString("pt-BR")}`
+    }
+    return dateFrom ? `a partir de ${new Date(dateFrom).toLocaleDateString("pt-BR")}` : ""
   }
 
   function gerarRelatorioImpressao() {
     if (!data || data.tests.length === 0) return
 
-    const reportWindow = window.open("", "_blank")
-    if (!reportWindow) return
-
     const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString("pt-BR")
     const formatTime = (dateStr: string) => new Date(dateStr).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+    const periodTitle = getPeriodTitle()
+
+    const reportWindow = window.open("", "_blank")
+    if (!reportWindow) return
 
     const html = `
       <!DOCTYPE html>
       <html lang="pt-BR">
       <head>
         <meta charset="UTF-8">
-        <title>Relatorio Diario - ${formatDate(data.date)}</title>
+        <title>Relatório - ${periodTitle}</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: Arial, sans-serif; padding: 20px; font-size: 11px; }
@@ -144,22 +170,19 @@ export function RelatorioDiarioView() {
           .badge-danger { background: #dc2626; color: white; }
           .badge-outline { border: 1px solid #ccc; }
           .no-print { margin-bottom: 15px; }
-          @media print { 
-            .no-print { display: none; } 
-            body { padding: 10px; }
-          }
+          @media print { .no-print { display: none; } body { padding: 10px; } }
         </style>
       </head>
       <body>
         <div class="no-print">
           <button onclick="window.print()" style="padding: 8px 16px; font-size: 12px; cursor: pointer;">
-            Imprimir Relatorio
+            Imprimir Relatório
           </button>
         </div>
         
         <div class="header">
-          <h1>Relatorio Diario - ${formatDate(data.date)}</h1>
-          <p>Gerado em ${new Date().toLocaleDateString("pt-BR")} as ${new Date().toLocaleTimeString("pt-BR")}</p>
+          <h1>Relatório Diário - ${periodTitle}</h1>
+          <p>Gerado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR")}</p>
         </div>
 
         <div class="summary">
@@ -169,30 +192,22 @@ export function RelatorioDiarioView() {
         <table>
           <thead>
             <tr>
-              <th>Obra</th>
-              <th>Modelo</th>
-              <th>Banca</th>
-              <th>8ID</th>
-              <th>Tempo Est.</th>
-              <th>Tempo Real</th>
-              <th>Status</th>
-              <th>Paradas</th>
-              <th>Cod. Material</th>
-              <th>Observacoes</th>
-              <th>Inicio</th>
+              <th>Obra</th><th>Modelo</th><th>Banca</th><th>8ID</th>
+              <th>Tempo Est.</th><th>Tempo Real</th><th>Status</th>
+              <th>Paradas</th><th>Cod. Material</th><th>Observações</th><th>Início</th>
             </tr>
           </thead>
           <tbody>
             ${data.tests.map(test => {
-              const isFinished = !!test.finished_at
-              const exceeded = isFinished && test.actual_duration_minutes && test.actual_duration_minutes > test.expected_duration_minutes
-              const statusBadge = !isFinished 
-                ? '<span class="badge badge-outline">Em andamento</span>'
-                : exceeded 
-                  ? '<span class="badge badge-danger">Excedeu</span>'
-                  : '<span class="badge badge-success">No tempo</span>'
-              
-              return `
+      const isFinished = !!test.finished_at
+      const exceeded = isFinished && test.actual_duration_minutes! > test.expected_duration_minutes
+      const statusBadge = !isFinished
+        ? '<span class="badge badge-outline">Em andamento</span>'
+        : exceeded
+          ? '<span class="badge badge-danger">Excedeu</span>'
+          : '<span class="badge badge-success">No tempo</span>'
+
+      return `
                 <tr>
                   <td><strong>${test.work_number}</strong></td>
                   <td>${test.model}</td>
@@ -201,13 +216,13 @@ export function RelatorioDiarioView() {
                   <td>${formatDuration(test.expected_duration_minutes)}</td>
                   <td>${test.actual_duration_minutes ? formatDuration(test.actual_duration_minutes) : "-"}</td>
                   <td>${statusBadge}</td>
-                  <td>${formatStops(test.stops)}</td>
-                  <td>${formatMaterialCodes(test.stops)}</td>
-                  <td>${formatObservations(test.stops)}</td>
+                  <td>${test.stops.map(s => s.stop_type + (s.sub_type ? ' > ' + s.sub_type : '')).join('; ')}</td>
+                  <td>${test.stops.filter(s => s.material_code).map(s => s.material_code).join(', ') || '-'}</td>
+                  <td>${test.stops.filter(s => s.observations).map(s => s.observations).join('; ') || '-'}</td>
                   <td>${formatTime(test.created_at)}</td>
                 </tr>
               `
-            }).join("")}
+    }).join("")}
           </tbody>
         </table>
       </body>
@@ -223,37 +238,54 @@ export function RelatorioDiarioView() {
       <AppHeader />
       <main className="mx-auto max-w-6xl p-4">
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-foreground">Relatorio Diario</h2>
+          <h2 className="text-2xl font-bold text-foreground">Relatório Diário</h2>
           <p className="text-sm text-muted-foreground">
-            Consulte todas as obras testadas em uma data especifica
+            Filtre obras testadas por **intervalo de datas** e **tipos de parada**
           </p>
         </div>
 
-        {/* Filtro de Data */}
+        {/* FILTROS SIMPLIFICADOS - SEM DATA ÚNICA */}
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Selecionar Data
+              Filtrar Período e Paradas
             </CardTitle>
             <CardDescription>
-              Escolha a data para visualizar os testes realizados
+              Selecione intervalo de datas (De/Até) e tipos de parada específicos
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {/* Data De (obrigatório) */}
               <div>
-                <Label htmlFor="date" className="text-sm font-medium">
-                  Data
+                <Label htmlFor="dateFrom" className="text-sm font-medium">
+                  De<span className="text-xs text-muted-foreground">(obrigatório)</span>
                 </Label>
                 <Input
-                  id="date"
+                  id="dateFrom"
                   type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
                   className="mt-1"
                 />
               </div>
+
+              {/* Data Até (opcional) */}
+              <div>
+                <Label htmlFor="dateTo" className="text-sm font-medium">
+                  Até
+                </Label>
+                <Input
+                  id="dateTo"
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+
+              {/* Modelos */}
               <div>
                 <Label className="text-sm font-medium">
                   Modelos <span className="text-muted-foreground font-normal">(opcional)</span>
@@ -266,9 +298,11 @@ export function RelatorioDiarioView() {
                   className="mt-1"
                 />
               </div>
+
+              {/* ✅ PARADAS (mantido e destacado) */}
               <div>
                 <Label className="text-sm font-medium">
-                  Paradas <span className="text-muted-foreground font-normal">(opcional)</span>
+                  Tipos de Paradas<span className="text-muted-foreground font-normal">(filtrar paradas)</span>
                 </Label>
                 <MultiSelect
                   options={[...STOP_TYPES]}
@@ -278,35 +312,50 @@ export function RelatorioDiarioView() {
                   className="mt-1"
                 />
               </div>
-              <div className="flex items-end">
-                <Button
-                  onClick={handleSearch}
-                  disabled={isLoading || !date}
-                  className="flex items-center gap-2 w-full"
-                >
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Search className="h-4 w-4" />
-                  )}
-                  Buscar
-                </Button>
-              </div>
             </div>
+
+            {/* Botão Buscar em linha separada */}
+            <div className="mt-6 flex justify-end">
+              <Button
+                onClick={handleSearch}
+                disabled={isLoading || !dateFrom}
+                className="flex items-center gap-2 px-8 h-10"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Buscando...
+                  </>
+                ) : (
+                  <>
+                    <Search className="h-4 w-4" />
+                    Buscar Testes
+                  </>
+                )}
+              </Button>
+            </div>
+
             {error && (
-              <p className="mt-2 text-sm text-destructive">{error}</p>
+              <p className="mt-4 p-3 bg-destructive/10 border border-destructive/30 rounded-md text-sm text-destructive">
+                {error}
+              </p>
             )}
           </CardContent>
         </Card>
 
-        {/* Resultados */}
+        {/* RESULTADOS */}
         {data && (
           <Card>
             <CardHeader className="flex flex-row items-start justify-between">
               <div>
                 <CardTitle className="text-base">
-                  Testes do dia {new Date(data.date).toLocaleDateString("pt-BR")}
-                  {selectedModels.length > 0 && selectedModels.length < MODELS.length && ` - ${selectedModels.join(", ")}`}
+                  Testes de <span className="font-normal">{getPeriodTitle()}</span>
+                  {selectedModels.length > 0 && (
+                    <span className="text-muted-foreground ml-2">• {selectedModels.join(", ")}</span>
+                  )}
+                  {selectedStops.length > 0 && (
+                    <span className="text-destructive ml-2">• Paradas: {selectedStops.join(", ")}</span>
+                  )}
                 </CardTitle>
                 <CardDescription>
                   {data.total_tests} teste(s) encontrado(s)
@@ -326,9 +375,14 @@ export function RelatorioDiarioView() {
             </CardHeader>
             <CardContent>
               {data.total_tests === 0 ? (
-                <p className="py-10 text-center text-sm text-muted-foreground">
-                  Nenhum teste encontrado nesta data
-                </p>
+                <div className="py-12 text-center">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Nenhum teste encontrado no período
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Tente ajustar as datas ou remover filtros de parada/modelo
+                  </p>
+                </div>
               ) : (
                 <div className="overflow-x-auto">
                   <Table className="min-w-[1000px]">
@@ -342,15 +396,13 @@ export function RelatorioDiarioView() {
                         <TableHead className="w-[80px]">Status</TableHead>
                         <TableHead className="w-[200px]">Paradas</TableHead>
                         <TableHead className="w-[120px]">Cod. Material</TableHead>
-                        <TableHead className="w-[200px]">Observacoes</TableHead>
+                        <TableHead className="w-[200px]">Observações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {data.tests.map((test) => (
                         <TableRow key={test.id} className="align-top">
-                          <TableCell className="font-medium">
-                            {test.work_number}
-                          </TableCell>
+                          <TableCell className="font-medium">{test.work_number}</TableCell>
                           <TableCell>{test.model}</TableCell>
                           <TableCell>{test.bench}</TableCell>
                           <TableCell>{test.employee_id}</TableCell>
@@ -374,19 +426,19 @@ export function RelatorioDiarioView() {
                           </TableCell>
                           <TableCell className="w-[120px]">
                             <div className="text-xs space-y-1">
-                              {test.stops.filter(s => s.material_code).length > 0 
+                              {test.stops.filter(s => s.material_code).length > 0
                                 ? test.stops.filter(s => s.material_code).map((stop, idx) => (
                                   <div key={idx} className="font-mono">{stop.material_code}</div>
-                                )) 
+                                ))
                                 : <span className="text-muted-foreground">-</span>}
                             </div>
                           </TableCell>
                           <TableCell className="w-[200px]">
                             <div className="text-xs space-y-1">
-                              {test.stops.filter(s => s.observations).length > 0 
+                              {test.stops.filter(s => s.observations).length > 0
                                 ? test.stops.filter(s => s.observations).map((stop, idx) => (
                                   <div key={idx} className="text-muted-foreground">{stop.observations}</div>
-                                )) 
+                                ))
                                 : <span className="text-muted-foreground">-</span>}
                             </div>
                           </TableCell>
