@@ -87,6 +87,22 @@ export async function PUT(
       return NextResponse.json({ error: "Teste não encontrado" }, { status: 404 })
     }
 
+    // Determinar valores de is_complete e finished_at baseado no status
+    let isComplete: boolean | null = null
+    let finishedAt: Date | null = null
+
+    if (data.status === "paused") {
+      isComplete = false
+      finishedAt = null
+    } else if (data.status === "finished") {
+      isComplete = true
+      finishedAt = new Date()
+    } else {
+      // in_progress
+      isComplete = null
+      finishedAt = null
+    }
+
     // Atualizar teste
     await sql`
       UPDATE tests
@@ -94,7 +110,9 @@ export async function PUT(
         employee_id = ${data.employee_id},
         model = ${data.model},
         bench = ${data.bench},
-        expected_duration_minutes = ${data.expected_duration_minutes}
+        expected_duration_minutes = ${data.expected_duration_minutes},
+        is_complete = ${isComplete},
+        finished_at = ${finishedAt}
       WHERE id = ${testId}
     `
 
