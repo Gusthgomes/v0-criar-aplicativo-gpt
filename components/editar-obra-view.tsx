@@ -70,6 +70,7 @@ export function EditarObraView() {
     model: "",
     bench: "",
     expected_duration_minutes: 0,
+    status: "" as "in_progress" | "paused" | "finished",
   })
 
   // Estado para edição de parada
@@ -113,6 +114,12 @@ export function EditarObraView() {
     }
   }
 
+  const getTestStatus = (test: Test): "in_progress" | "paused" | "finished" => {
+    if (test.finished_at) return "finished"
+    if (test.is_complete === false) return "paused"
+    return "in_progress"
+  }
+
   const openEditTest = (test: Test) => {
     setEditingTest(test)
     setEditTestData({
@@ -120,6 +127,7 @@ export function EditarObraView() {
       model: test.model,
       bench: test.bench.toString(),
       expected_duration_minutes: test.expected_duration_minutes,
+      status: getTestStatus(test),
     })
   }
 
@@ -134,8 +142,11 @@ export function EditarObraView() {
         body: JSON.stringify({
           testId: editingTest.id,
           data: {
-            ...editTestData,
+            employee_id: editTestData.employee_id,
+            model: editTestData.model,
             bench: Number(editTestData.bench),
+            expected_duration_minutes: editTestData.expected_duration_minutes,
+            status: editTestData.status,
           },
         }),
       })
@@ -410,7 +421,7 @@ export function EditarObraView() {
           <DialogHeader>
             <DialogTitle>Editar Teste</DialogTitle>
             <DialogDescription>
-              Altere os dados do teste. Os campos de data e status não podem ser alterados.
+              Altere os dados do teste, incluindo o status.
             </DialogDescription>
           </DialogHeader>
 
@@ -472,6 +483,23 @@ export function EditarObraView() {
                 value={editTestData.expected_duration_minutes}
                 onChange={(e) => setEditTestData({ ...editTestData, expected_duration_minutes: Number(e.target.value) })}
               />
+            </div>
+
+            <div>
+              <Label>Status do Teste</Label>
+              <Select
+                value={editTestData.status}
+                onValueChange={(value) => setEditTestData({ ...editTestData, status: value as "in_progress" | "paused" | "finished" })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="in_progress">Em Andamento</SelectItem>
+                  <SelectItem value="paused">Pausado</SelectItem>
+                  <SelectItem value="finished">Finalizado</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
