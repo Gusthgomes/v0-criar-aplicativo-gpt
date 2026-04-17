@@ -26,6 +26,7 @@ import {
   Cell,
   ComposedChart,
   Bar,
+  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -127,6 +128,55 @@ export function RelatorioDiarioView() {
     }
     return <Badge className="bg-green-600 hover:bg-green-700">No tempo</Badge>
   }
+
+  // Cores para os gráficos
+  const CHART_COLORS = [
+    "#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6", 
+    "#3b82f6", "#8b5cf6", "#ec4899", "#6b7280", "#0ea5e9"
+  ]
+
+  // Processar dados das paradas para os gráficos
+  function getStopsChartData() {
+    if (!data || data.tests.length === 0) return { pieData: [], paretoData: [] }
+
+    // Contar frequência de cada tipo de parada
+    const stopCounts: Record<string, number> = {}
+    
+    data.tests.forEach(test => {
+      test.stops.forEach(stop => {
+        const key = stop.stop_type
+        stopCounts[key] = (stopCounts[key] || 0) + 1
+      })
+    })
+
+    // Transformar em array e ordenar por frequência (decrescente)
+    const sortedStops = Object.entries(stopCounts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+
+    // Dados para o gráfico de pizza
+    const pieData = sortedStops.map((item, index) => ({
+      ...item,
+      fill: CHART_COLORS[index % CHART_COLORS.length]
+    }))
+
+    // Dados para o gráfico de Pareto (com % acumulado)
+    const total = sortedStops.reduce((sum, item) => sum + item.value, 0)
+    let accumulated = 0
+    const paretoData = sortedStops.map((item, index) => {
+      accumulated += item.value
+      return {
+        name: item.name,
+        frequencia: item.value,
+        acumulado: Math.round((accumulated / total) * 100),
+        fill: CHART_COLORS[index % CHART_COLORS.length]
+      }
+    })
+
+    return { pieData, paretoData }
+  }
+
+  const { pieData, paretoData } = getStopsChartData()
 
   // Título dinâmico do período
   function getPeriodTitle() {
@@ -450,6 +500,114 @@ export function RelatorioDiarioView() {
               )}
             </CardContent>
           </Card>
+        )}
+
+        {/* GRÁFICOS DE PARADAS */}
+        {data && data.tests.length > 0 && pieData.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            {/* Gráfico de Pizza - Distribuição de Paradas */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Distribuição de Paradas</CardTitle>
+                <CardDescription>
+                  Proporção de cada tipo de parada no período filtrado
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                        outerRadius={100}
+                        dataKey="value"
+                      >
+                        {pieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value: number) => [`${value} ocorrência(s)`, 'Quantidade']}
+                      />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Gráfico de Pareto - Frequência de Paradas */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Análise de Pareto - Paradas</CardTitle>
+                <CardDescription>
+                  Frequência e % acumulado para identificar as principais paradas
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={paretoData} margin={{ top: 20, right: 30, left: 0, bottom: 60 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis 
+                        dataKey="name" 
+                        angle={-45} 
+                        textAnchor="end" 
+                        height={80}
+                        tick={{ fontSize: 10 }}
+                        className="fill-muted-foreground"
+                      />
+                      <YAxis 
+                        yAxisId="left" 
+                        orientation="left"
+                        tick={{ fontSize: 10 }}
+                        className="fill-muted-foreground"
+                        label={{ value: 'Frequência', angle: -90, position: 'insideLeft', fontSize: 10 }}
+                      />
+                      <YAxis 
+                        yAxisId="right" 
+                        orientation="right" 
+                        domain={[0, 100]}
+                        tick={{ fontSize: 10 }}
+                        className="fill-muted-foreground"
+                        label={{ value: '% Acumulado', angle: 90, position: 'insideRight', fontSize: 10 }}
+                      />
+                      <Tooltip 
+                        formatter={(value: number, name: string) => [
+                          name === 'frequencia' ? `${value} ocorrência(s)` : `${value}%`,
+                          name === 'frequencia' ? 'Frequência' : '% Acumulado'
+                        ]}
+                      />
+                      <Legend />
+                      <Bar 
+                        yAxisId="left" 
+                        dataKey="frequencia" 
+                        name="Frequência"
+                        radius={[4, 4, 0, 0]}
+                      >
+                        {paretoData.map((entry, index) => (
+                          <Cell key={`bar-${index}`} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                      <Line
+                        type="monotone"
+                        dataKey="acumulado"
+                        yAxisId="right"
+                        stroke="#ef4444"
+                        strokeWidth={2}
+                        name="% Acumulado"
+                        dot={{ fill: "#ef4444", r: 4 }}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         )}
       </main>
     </div>
