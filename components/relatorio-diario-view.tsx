@@ -514,28 +514,45 @@ export function RelatorioDiarioView() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={pieData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                        outerRadius={100}
-                        dataKey="value"
-                      >
-                        {pieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        formatter={(value: number) => [`${value} ocorrência(s)`, 'Quantidade']}
-                      />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
+                <div className="flex flex-col lg:flex-row gap-4">
+                  <div className="h-[250px] flex-1">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                          outerRadius={80}
+                          innerRadius={40}
+                          dataKey="value"
+                          paddingAngle={2}
+                        >
+                          {pieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          formatter={(value: number) => [`${value} ocorrência(s)`, 'Quantidade']}
+                          contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  {/* Legenda customizada */}
+                  <div className="flex flex-col gap-1.5 justify-center min-w-[140px]">
+                    {pieData.map((item, index) => (
+                      <div key={index} className="flex items-center gap-2 text-sm">
+                        <div 
+                          className="w-3 h-3 rounded-sm shrink-0" 
+                          style={{ backgroundColor: item.fill }}
+                        />
+                        <span className="truncate text-muted-foreground">{item.name}</span>
+                        <span className="ml-auto font-medium">{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -549,57 +566,66 @@ export function RelatorioDiarioView() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px]">
+                {/* Legenda customizada do Pareto */}
+                <div className="flex items-center gap-4 mb-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-sm bg-blue-500" />
+                    <span className="text-muted-foreground">Frequência (barras)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500" />
+                    <span className="text-muted-foreground">% Acumulado (linha)</span>
+                  </div>
+                </div>
+                <div className="h-[280px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={paretoData} margin={{ top: 20, right: 30, left: 0, bottom: 60 }}>
+                    <ComposedChart data={paretoData} margin={{ top: 10, right: 40, left: 0, bottom: 60 }}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                       <XAxis 
                         dataKey="name" 
                         angle={-45} 
                         textAnchor="end" 
-                        height={80}
-                        tick={{ fontSize: 10 }}
+                        height={70}
+                        tick={{ fontSize: 11 }}
                         className="fill-muted-foreground"
+                        interval={0}
                       />
                       <YAxis 
                         yAxisId="left" 
                         orientation="left"
-                        tick={{ fontSize: 10 }}
+                        tick={{ fontSize: 11 }}
                         className="fill-muted-foreground"
-                        label={{ value: 'Frequência', angle: -90, position: 'insideLeft', fontSize: 10 }}
+                        allowDecimals={false}
                       />
                       <YAxis 
                         yAxisId="right" 
                         orientation="right" 
                         domain={[0, 100]}
-                        tick={{ fontSize: 10 }}
+                        tick={{ fontSize: 11 }}
                         className="fill-muted-foreground"
-                        label={{ value: '% Acumulado', angle: 90, position: 'insideRight', fontSize: 10 }}
+                        tickFormatter={(value) => `${value}%`}
                       />
                       <Tooltip 
                         formatter={(value: number, name: string) => [
                           name === 'frequencia' ? `${value} ocorrência(s)` : `${value}%`,
                           name === 'frequencia' ? 'Frequência' : '% Acumulado'
                         ]}
+                        contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}
                       />
-                      <Legend />
                       <Bar 
                         yAxisId="left" 
                         dataKey="frequencia" 
-                        name="Frequência"
+                        name="frequencia"
                         radius={[4, 4, 0, 0]}
-                      >
-                        {paretoData.map((entry, index) => (
-                          <Cell key={`bar-${index}`} fill={entry.fill} />
-                        ))}
-                      </Bar>
+                        fill="#3b82f6"
+                      />
                       <Line
                         type="monotone"
                         dataKey="acumulado"
                         yAxisId="right"
                         stroke="#ef4444"
                         strokeWidth={2}
-                        name="% Acumulado"
+                        name="acumulado"
                         dot={{ fill: "#ef4444", r: 4 }}
                       />
                     </ComposedChart>
